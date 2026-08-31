@@ -1,0 +1,70 @@
+export default {
+  content: ['./index.html', './src/**/*.{js,jsx}'],
+  safelist: [
+    'bg-aivar-purple', 'bg-aivar-purple-50', 'bg-aivar-purple-100', 'bg-aivar-purple-200',
+    'bg-aivar-purple-500', 'bg-aivar-purple-600', 'bg-aivar-purple-700',
+    'hover:bg-aivar-purple-600', 'hover:bg-aivar-purple-700',
+    'text-aivar-purple', 'text-aivar-purple-500', 'text-aivar-purple-600', 'text-aivar-purple-700',
+    'border-aivar-purple', 'border-aivar-purple-200', 'border-aivar-purple-100',
+    'hover:text-aivar-purple', 'hover:border-aivar-purple',
+    'hover:bg-aivar-purple-50', 'ring-aivar-accent',
+    'bg-aivar-accent', 'text-aivar-accent', 'bg-aivar-dark',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        // Aivar brand palette (mapped to pando-* names so Tailwind scanner works)
+        'aivar-purple':      '#6C5CE7',
+        'aivar-purple-700':  '#5A4BD1',
+        'aivar-purple-600':  '#6256DC',
+        'aivar-purple-500':  '#7B6FEF',
+        'aivar-purple-200':  '#C4BEFA',
+        'aivar-purple-100':  '#E0DEFF',
+        'aivar-purple-50':   '#EEF2FF',
+        'aivar-accent':      '#A29BFE',
+        'aivar-accent-600':  '#8B82FE',
+        'aivar-accent-100':  '#F0EFFE',
+        'aivar-dark':        '#0D1117',
+        'aivar-dark-700':    '#161B22',
+        // pando-green remapped to purple so existing classes render purple
+        'pando-green':       '#6C5CE7',
+        'pando-green-700':   '#5A4BD1',
+        'pando-green-600':   '#6256DC',
+        'pando-green-500':   '#7B6FEF',
+        'pando-green-200':   '#C4BEFA',
+        'pando-green-100':   '#E0DEFF',
+        'pando-green-50':    '#EEF2FF',
+        'pando-gold':        '#A29BFE',
+        'pando-gold-600':    '#8B82FE',
+        'pando-gold-100':    '#F0EFFE',
+        // App surface
+        background:   '#F5F7FA',
+        surface:      '#FFFFFF',
+        card:         '#FFFFFF',
+        border:       '#E8EAED',
+        'border-dark':'#D1D5DB',
+        // Text
+        'text-primary':   '#111827',
+        'text-secondary': '#4B5563',
+        'text-muted':     '#9CA3AF',
+        // Semantic
+        success: '#16A34A',
+        warning: '#D97706',
+        danger:  '#DC2626',
+        'success-bg': '#F0FDF4',
+        'warning-bg': '#FFFBEB',
+        'danger-bg':  '#FEF2F2',
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+      },
+      boxShadow: {
+        card: '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)',
+        'card-hover': '0 4px 16px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.06)',
+        modal: '0 20px 60px rgba(0,0,0,0.20)',
+        topbar: '0 1px 3px rgba(0,0,0,0.06)',
+      },
+    },
+  },
+  plugins: [],
+}

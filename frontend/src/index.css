@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: #F5F7FA;
+  color: #111827;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+input, select, textarea {
+  background: #FFFFFF;
+  border: 1.5px solid #E8EAED;
+  color: #111827;
+  border-radius: 8px;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #6C5CE7;
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.12);
+}
+
+input::placeholder, textarea::placeholder {
+  color: #9CA3AF;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F5F7FA;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
+}
+
+/* ── Aivar purple overrides (replaces pando-green everywhere) ── */
+.bg-pando-green          { background-color: #6C5CE7 !important; }
+.bg-pando-green-600      { background-color: #6256DC !important; }
+.bg-pando-green-700      { background-color: #5A4BD1 !important; }
+.bg-pando-green-50       { background-color: #EEF2FF !important; }
+.bg-pando-green-100      { background-color: #E0DEFF !important; }
+.bg-pando-green-200      { background-color: #C4BEFA !important; }
+.text-pando-green        { color: #6C5CE7 !important; }
+.text-pando-green-600    { color: #6256DC !important; }
+.text-pando-green-700    { color: #5A4BD1 !important; }
+.border-pando-green      { border-color: #6C5CE7 !important; }
+.border-pando-green-200  { border-color: #C4BEFA !important; }
+.border-pando-green-100  { border-color: #E0DEFF !important; }
+.hover\:bg-pando-green-600:hover { background-color: #6256DC !important; }
+.hover\:bg-pando-green-50:hover  { background-color: #EEF2FF !important; }
+.hover\:text-pando-green:hover   { color: #6C5CE7 !important; }
+.hover\:border-pando-green:hover { border-color: #6C5CE7 !important; }
+.ring-pando-green        { --tw-ring-color: #6C5CE7 !important; }
+.border-l-pando-green    { border-left-color: #6C5CE7 !important; }
+.bg-pando-gold           { background-color: #A29BFE !important; }
+.bg-pando-gold-100       { background-color: #F0EFFE !important; }
+.text-pando-gold         { color: #A29BFE !important; }
+.ring-pando-gold\/25     { --tw-ring-color: rgba(162,155,254,0.25) !important; }
