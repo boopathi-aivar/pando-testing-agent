@@ -15,15 +15,16 @@ import uuid
 from difflib import SequenceMatcher
 from datetime import datetime, timezone
 
-from tools.mongodb_tools import (
+from tools.dynamodb_tools import (
     get_project_config,
     save_test_result,
     update_project_last_tested,
+    _from_dynamo,
 )
 from agents.input_collector import run_input_collector, collect_invoice_pdf
 from agents.log_analyzer import run_log_analyzer
 from agents.payload_validator import run_payload_validator
-from database import col_projects
+from database import tbl_projects
 
 
 # ── Project matching ──────────────────────────────────────────────────────────
@@ -40,7 +41,7 @@ def _extract_bucket_names(project: dict) -> list[str]:
 def find_project_by_bucket(bucket_name: str) -> dict | None:
     if not bucket_name:
         return None
-    all_projects = list(col_projects().find({}, {"_id": 0}))
+    all_projects = [_from_dynamo(i) for i in tbl_projects().scan().get("Items", [])]
     bucket_lower = bucket_name.lower()
 
     for proj in all_projects:

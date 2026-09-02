@@ -1,92 +1,129 @@
 """
-MongoDB connection — single client instance reused across requests.
-Collections:
-  projects  — project configurations
-  results   — test results per project
-  jobs      — in-flight test jobs (TTL-indexed, expire after 1 h)
+DynamoDB connection — boto3 resource/table helpers reused across requests.
+Tables:
+  pando-projects  — project configurations        (PK: project_id)
+  pando-results   — test results per project      (PK: result_id, GSI: project_id-index)
+  pando-jobs      — in-flight test jobs with TTL  (PK: job_id)
 """
 
 import os
+import time
+import boto3
 from dotenv import load_dotenv
-from pymongo import MongoClient, ASCENDING
-from pymongo.collection import Collection
-from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
+from boto3.dynamodb.conditions import Key
 
 load_dotenv()
 
-_MONGO_URL: str = os.environ["MONGODB_URL"]
-_DB_NAME:   str = os.getenv("MONGODB_DB", "pando_testing_agent")
+_AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
 
-_client: MongoClient | None = None
+_PROJECTS_TABLE = os.getenv("PROJECTS_TABLE", "pando-projects")
+_RESULTS_TABLE  = os.getenv("RESULTS_TABLE",  "pando-results")
+_JOBS_TABLE     = os.getenv("JOBS_TABLE",     "pando-jobs")
 
-
-def get_client() -> MongoClient:
-    global _client
-    if _client is None:
-        _client = MongoClient(_MONGO_URL, serverSelectionTimeoutMS=10_000)
-    return _client
+_dynamodb = None
 
 
-def get_db():
-    return get_client()[_DB_NAME]
+def _get_resource():
+    global _dynamodb
+    if _dynamodb is None:
+        _dynamodb = boto3.resource("dynamodb", region_name=_AWS_REGION)
+    return _dynamodb
+
+
+def tbl_projects():
+    return _get_resource().Table(_PROJECTS_TABLE)
+
+
+def tbl_results():
+    return _get_resource().Table(_RESULTS_TABLE)
+
+
+def tbl_jobs():
+    return _get_resource().Table(_JOBS_TABLE)
 
 
 def check_connection() -> None:
-    """
-    Ping MongoDB and print a clear connected / failed message to stdout.
-    Called once at startup from main.py lifespan.
-    """
-    # Mask credentials in the URL before printing
-    safe_url = _MONGO_URL
-    try:
-        import re
-        safe_url = re.sub(r"//([^:]+):([^@]+)@", r"//\1:****@", _MONGO_URL)
-    except Exception:
-        pass
-
     print("\n" + "─" * 60)
-    print("  MongoDB connection check")
-    print(f"  URL : {safe_url}")
-    print(f"  DB  : {_DB_NAME}")
+    print("  DynamoDB connection check")
+    print(f"  Region          : {_AWS_REGION}")
+    print(f"  Projects table  : {_PROJECTS_TABLE}")
+    print(f"  Results table   : {_RESULTS_TABLE}")
+    print(f"  Jobs table      : {_JOBS_TABLE}")
     print("─" * 60)
 
     try:
-        client = get_client()
-        client.admin.command("ping")          # raises if unreachable
-        info   = client.server_info()
-        version = info.get("version", "unknown")
-        host    = client.primary or safe_url.split("@")[-1].split("/")[0]
-        print(f"  ✓  Connected  (MongoDB {version}  |  host: {host})")
-    except ServerSelectionTimeoutError:
-        print("  ✗  FAILED — could not reach MongoDB (timeout).")
-        print("     Check: network access whitelist, cluster status, MONGODB_URL.")
-    except ConnectionFailure as exc:
-        print(f"  ✗  FAILED — connection error: {exc}")
-        print("     Check: username / password in MONGODB_URL.")
+        tbl_projects().load()
+        print("  ✓  Connected — tables are accessible.")
     except Exception as exc:
         print(f"  ✗  FAILED — {exc}")
+        print("     Check: IAM permissions, table names, AWS_REGION env var.")
 
     print("─" * 60 + "\n")
 
 
-# ── Collection helpers ────────────────────────────────────────────────────────
-def col_projects() -> Collection:
-    return get_db()["projects"]
+def ensure_tables() -> None:
+    """
+    Create DynamoDB tables if they don't already exist.
+    Safe to call on every startup — no-ops when tables exist.
+    """
+    client = boto3.client("dynamodb", region_name=_AWS_REGION)
+    existing = {t["TableName"] for t in client.list_tables()["TableNames"]}
 
+    # ── pando-projects ────────────────────────────────────────────────────────
+    if _PROJECTS_TABLE not in existing:
+        client.create_table(
+            TableName=_PROJECTS_TABLE,
+            BillingMode="PAY_PER_REQUEST",
+            AttributeDefinitions=[
+                {"AttributeName": "project_id", "AttributeType": "S"},
+            ],
+            KeySchema=[
+                {"AttributeName": "project_id", "KeyType": "HASH"},
+            ],
+        )
+        print(f"[DynamoDB] Created table: {_PROJECTS_TABLE}")
 
-def col_results() -> Collection:
-    return get_db()["results"]
+    # ── pando-results ─────────────────────────────────────────────────────────
+    if _RESULTS_TABLE not in existing:
+        client.create_table(
+            TableName=_RESULTS_TABLE,
+            BillingMode="PAY_PER_REQUEST",
+            AttributeDefinitions=[
+                {"AttributeName": "result_id",  "AttributeType": "S"},
+                {"AttributeName": "project_id", "AttributeType": "S"},
+                {"AttributeName": "timestamp",  "AttributeType": "S"},
+            ],
+            KeySchema=[
+                {"AttributeName": "result_id", "KeyType": "HASH"},
+            ],
+            GlobalSecondaryIndexes=[
+                {
+                    "IndexName": "project_id-index",
+                    "KeySchema": [
+                        {"AttributeName": "project_id", "KeyType": "HASH"},
+                        {"AttributeName": "timestamp",  "KeyType": "RANGE"},
+                    ],
+                    "Projection": {"ProjectionType": "ALL"},
+                },
+            ],
+        )
+        print(f"[DynamoDB] Created table: {_RESULTS_TABLE}")
 
-
-def col_jobs() -> Collection:
-    return get_db()["jobs"]
-
-
-# ── Index bootstrap (called once at startup) ──────────────────────────────────
-def ensure_indexes() -> None:
-    col_projects().create_index([("project_id", ASCENDING)], unique=True)
-    col_results().create_index([("project_id", ASCENDING)])
-    col_results().create_index([("result_id", ASCENDING)], unique=True)
-    col_jobs().create_index([("job_id", ASCENDING)], unique=True)
-    # Auto-expire jobs after 3600 seconds (1 hour)
-    col_jobs().create_index([("created_at_dt", ASCENDING)], expireAfterSeconds=3600)
+    # ── pando-jobs ────────────────────────────────────────────────────────────
+    if _JOBS_TABLE not in existing:
+        client.create_table(
+            TableName=_JOBS_TABLE,
+            BillingMode="PAY_PER_REQUEST",
+            AttributeDefinitions=[
+                {"AttributeName": "job_id", "AttributeType": "S"},
+            ],
+            KeySchema=[
+                {"AttributeName": "job_id", "KeyType": "HASH"},
+            ],
+        )
+        # Enable TTL on the 'ttl' attribute
+        client.update_time_to_live(
+            TableName=_JOBS_TABLE,
+            TimeToLiveSpecification={"Enabled": True, "AttributeName": "ttl"},
+        )
+        print(f"[DynamoDB] Created table: {_JOBS_TABLE} (TTL on 'ttl' attribute)")

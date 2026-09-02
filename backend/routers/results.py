@@ -2,8 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
 
 from models.result import TestResult
-from tools.mongodb_tools import get_results_for_project, get_result_by_id
-from database import col_results
+from tools.dynamodb_tools import get_results_for_project, get_result_by_id
 from routers.auth import get_current_user
 
 router = APIRouter(tags=["results"])
@@ -28,12 +27,15 @@ def list_results(
 @router.get("/projects/{project_id}/carriers")
 def list_carriers(project_id: str, _user=Depends(get_current_user)):
     """Return the distinct vendor_name values for a project's results."""
-    pipeline = [
-        {"$match": {"project_id": project_id, "vendor_name": {"$nin": [None, ""]}}},
-        {"$group": {"_id": "$vendor_name"}},
-        {"$sort": {"_id": 1}},
-    ]
-    carriers = [doc["_id"] for doc in col_results().aggregate(pipeline)]
+    results = get_results_for_project(project_id, limit=500)
+    seen = set()
+    carriers = []
+    for r in results:
+        name = r.get("vendor_name")
+        if name and name not in seen:
+            seen.add(name)
+            carriers.append(name)
+    carriers.sort()
     return {"carriers": carriers}
 
 

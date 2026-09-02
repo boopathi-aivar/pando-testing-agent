@@ -6,16 +6,16 @@ load_dotenv()
 
 
 class Settings:
-    MONGODB_URL: str           = os.getenv("MONGODB_URL",           "mongodb://localhost:27017")
-    MONGODB_DB: str            = os.getenv("MONGODB_DB",            "pando_testing_agent")
+    PROJECTS_TABLE: str        = os.getenv("PROJECTS_TABLE",        "pando-projects")
+    RESULTS_TABLE: str         = os.getenv("RESULTS_TABLE",         "pando-results")
+    JOBS_TABLE: str            = os.getenv("JOBS_TABLE",            "pando-jobs")
     JWT_SECRET_KEY: str        = os.getenv("JWT_SECRET_KEY",        "change-me-in-production")
-    AWS_REGION: str            = os.getenv("AWS_REGION",            "us-east-1")
+    AWS_REGION: str            = os.getenv("AWS_REGION",            "ap-south-1")
     AWS_ACCESS_KEY_ID: str     = os.getenv("AWS_ACCESS_KEY_ID",     "")
     AWS_SECRET_ACCESS_KEY: str = os.getenv("AWS_SECRET_ACCESS_KEY", "")
     LOG_GROUP_PREFIX: str      = os.getenv("LOG_GROUP_PREFIX",      "/aws/lambda/invoice-processor")
     ANTHROPIC_API_KEY: str     = os.getenv("ANTHROPIC_API_KEY",     "")
     INTAKE_API_KEY: str        = os.getenv("INTAKE_API_KEY",        "change-me-intake-secret")
-    # Bedrock model — override via BEDROCK_MODEL_ID env var if needed
     BEDROCK_MODEL_ID: str      = os.getenv("BEDROCK_MODEL_ID",      "us.anthropic.claude-sonnet-4-6")
 
 

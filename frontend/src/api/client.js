@@ -4,13 +4,18 @@ export const getUser  = () => { try { return JSON.parse(localStorage.getItem('pa
 export const setAuth  = (token, user) => { localStorage.setItem('pando_token', token); localStorage.setItem('pando_user', JSON.stringify(user)) }
 export const clearAuth = () => { localStorage.removeItem('pando_token'); localStorage.removeItem('pando_user') }
 
+// ─── API base URL ─────────────────────────────────────────────────────────────
+// Locally:     empty string  → Vite proxy handles /api/*  → localhost:3001
+// In Amplify:  VITE_API_URL  → https://xxx.execute-api.region.amazonaws.com
+const API_BASE = import.meta.env.VITE_API_URL || ''
+
 // ─── Base fetch wrapper ───────────────────────────────────────────────────────
 async function request(path, options = {}) {
   const token = getToken()
   const headers = { 'Content-Type': 'application/json', ...(options.headers ?? {}) }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  const res = await fetch(`/api${path}`, { ...options, headers })
+  const res = await fetch(`${API_BASE}/api${path}`, { ...options, headers })
 
   if (res.status === 401) {
     clearAuth()

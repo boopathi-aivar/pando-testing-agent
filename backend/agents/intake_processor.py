@@ -19,23 +19,25 @@ import uuid
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 
-from database import col_projects
-from tools.mongodb_tools import save_test_result, update_project_last_tested
+from database import tbl_projects
+from tools.dynamodb_tools import save_test_result, update_project_last_tested, _from_dynamo
 from agents.input_collector import run_input_collector, collect_invoice_pdf
-from agents.payload_validator import run_payload_validator
+from agents.scoring_agent import run_scoring_agent
 
 
 # ── Project resolution ────────────────────────────────────────────────────────
 
 def _find_by_project_id(project_id: str) -> dict | None:
-    return col_projects().find_one({"project_id": project_id}, {"_id": 0})
+    resp = tbl_projects().get_item(Key={"project_id": project_id})
+    item = resp.get("Item")
+    return _from_dynamo(item) if item else None
 
 
 def _find_by_s3_bucket(bucket: str) -> dict | None:
     if not bucket:
         return None
     bucket_lower = bucket.lower()
-    all_projects = list(col_projects().find({}, {"_id": 0}))
+    all_projects = [_from_dynamo(i) for i in tbl_projects().scan().get("Items", [])]
 
     # Exact match first
     for proj in all_projects:
@@ -59,9 +61,12 @@ def _find_by_s3_bucket(bucket: str) -> dict | None:
 def _find_by_log_group(log_group: str) -> dict | None:
     if not log_group:
         return None
-    return col_projects().find_one(
-        {"cloudwatch_log_group": log_group}, {"_id": 0}
+    from boto3.dynamodb.conditions import Attr
+    resp = tbl_projects().scan(
+        FilterExpression=Attr("cloudwatch_log_group").eq(log_group)
     )
+    items = resp.get("Items", [])
+    return _from_dynamo(items[0]) if items else None
 
 
 def resolve_project(project_id: str | None, s3_bucket: str | None, log_group: str | None) -> dict | None:
@@ -189,9 +194,9 @@ def process_intake(intake_data: dict) -> dict:
         print("[Intake] Fetching invoice PDF from S3…")
         log_analysis["invoice_pdf"] = collect_invoice_pdf(payload)
 
-        # Step 2 — validate fields
-        print("[Intake] Validating payload fields…")
-        validation = run_payload_validator(project, input_files, log_analysis)
+        # Step 2 — score actual vs expected (PDF extraction + LLM scoring)
+        print("[Intake] Running scoring agent (actual vs expected from PDF)…")
+        validation = run_scoring_agent(project, input_files, log_analysis)
 
         test_result = {
             "result_id":              result_id,
@@ -211,12 +216,13 @@ def process_intake(intake_data: dict) -> dict:
                 "execution_duration_ms": log_analysis["execution_duration_ms"],
                 "cold_start":            log_analysis["cold_start"],
             },
-            "raw_payload": log_analysis["payload"],
-            "source": "lambda_push",
+            "raw_payload":       log_analysis["payload"],
+            "expected_from_pdf": validation.get("expected_from_pdf", {}),
+            "source":            "lambda_push",
         }
 
     # Step 4 — persist
-    print("[Intake] Saving result to MongoDB…")
+    print("[Intake] Saving result to DynamoDB…")
     save_test_result(project_id, json.dumps(test_result, default=str))
     update_project_last_tested(project_id, test_result["overall_score"], test_result["status"])
 

@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routers import auth, projects, results, jobs, intake
-from database import ensure_indexes, check_connection
+from database import check_connection, ensure_tables
 from seed import seed_if_empty
 
 
@@ -12,19 +12,19 @@ from seed import seed_if_empty
 async def lifespan(app: FastAPI):
     check_connection()
     try:
-        ensure_indexes()
+        ensure_tables()
         seed_if_empty()
     except Exception as exc:
         print(f"\n  WARNING: Could not initialize database — {exc}")
-        print("  The server will start, but database operations will fail.")
-        print("  Fix MONGODB_URL in backend/.env and restart.\n")
+        print("  The server will start, but database operations may fail.")
+        print("  Check IAM permissions, PROJECTS_TABLE/RESULTS_TABLE/JOBS_TABLE, and AWS_REGION.\n")
     yield
 
 
 app = FastAPI(
     title="Pando Testing Agent API",
     version="2.0.0",
-    description="Invoice testing orchestration backend — powered by Strands agents and MongoDB",
+    description="Invoice testing orchestration backend — powered by Strands agents and DynamoDB",
     lifespan=lifespan,
 )
 

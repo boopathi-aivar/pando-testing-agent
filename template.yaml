@@ -1,0 +1,224 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Invoice Testing Agent — Backend Lambda + API Gateway
+
+# ── Parameters ────────────────────────────────────────────────────────────────
+Parameters:
+  JwtSecretKey:
+    Type: String
+    Description: Secret key for signing JWT tokens
+    Default: invoice-testing-agent-secret
+  IntakeApiKey:
+    Type: String
+    Description: Shared secret for the /api/intake webhook (used by invoice_processor)
+    Default: invoice-testing-agent-intake-secret
+  BedrockModelId:
+    Type: String
+    Default: us.anthropic.claude-sonnet-4-6
+  AwsRegion:
+    Type: String
+    Default: us-east-1
+
+# ── Shared env vars across both functions ─────────────────────────────────────
+Globals:
+  Function:
+    Environment:
+      Variables:
+        PROJECTS_TABLE:   !Ref ProjectsTable
+        RESULTS_TABLE:    !Ref ResultsTable
+        JOBS_TABLE:       !Ref JobsTable
+        JWT_SECRET_KEY:   !Ref JwtSecretKey
+        INTAKE_API_KEY:   !Ref IntakeApiKey
+        BEDROCK_MODEL_ID: !Ref BedrockModelId
+        AWS_REGION:       !Ref AwsRegion
+
+Resources:
+
+  # ── DynamoDB Tables ───────────────────────────────────────────────────────────
+
+  ProjectsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: invoice-testing-agent-projects
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: project_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: project_id
+          KeyType: HASH
+
+  ResultsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: invoice-testing-agent-results
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: result_id
+          AttributeType: S
+        - AttributeName: project_id
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: result_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: project_id-index
+          KeySchema:
+            - AttributeName: project_id
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  JobsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: invoice-testing-agent-jobs
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  # ── HTTP API Gateway ──────────────────────────────────────────────────────────
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowHeaders:
+          - "Content-Type"
+          - "Authorization"
+          - "X-Intake-Key"
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+
+  # ── API Function (handles all HTTP routes, short timeout) ────────────────────
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: invoice-testing-agent-api
+      PackageType: Image
+      ImageConfig:
+        Command: ["lambda_handler.api_handler"]
+      MemorySize: 512
+      Timeout: 30
+      Events:
+        ApiProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path:  /{proxy+}
+            Method: ANY
+        ApiRoot:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path:  /
+            Method: ANY
+      Environment:
+        Variables:
+          PROCESSOR_FUNCTION_ARN: !GetAtt ProcessorFunction.Arn
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource: !GetAtt ProcessorFunction.Arn
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+                - dynamodb:BatchWriteItem
+              Resource:
+                - !GetAtt ProjectsTable.Arn
+                - !GetAtt ResultsTable.Arn
+                - !Sub "${ResultsTable.Arn}/index/*"
+                - !GetAtt JobsTable.Arn
+    Metadata:
+      DockerContext: ./backend
+      Dockerfile:    Dockerfile
+
+  # ── Processor Function (AI pipeline, long timeout) ───────────────────────────
+  ProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: invoice-testing-agent-processor
+      PackageType: Image
+      ImageConfig:
+        Command: ["lambda_handler.processor_handler"]
+      MemorySize: 1024
+      Timeout: 900   # 15 minutes — enough for full AI pipeline
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - S3ReadPolicy:
+            BucketName: "*"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:Scan
+                - dynamodb:BatchWriteItem
+              Resource:
+                - !GetAtt ProjectsTable.Arn
+                - !GetAtt ResultsTable.Arn
+                - !Sub "${ResultsTable.Arn}/index/*"
+                - !GetAtt JobsTable.Arn
+            - Effect: Allow
+              Action:
+                - logs:StartQuery
+                - logs:GetQueryResults
+                - logs:DescribeLogGroups
+                - logs:FilterLogEvents
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:InvokeModelWithResponseStream
+              Resource: "*"
+    Metadata:
+      DockerContext: ./backend
+      Dockerfile:    Dockerfile
+
+# ── Outputs ───────────────────────────────────────────────────────────────────
+Outputs:
+  ApiUrl:
+    Description: "API Gateway URL — set this as VITE_API_URL in Amplify"
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+
+  IntakeEndpoint:
+    Description: "Lambda intake webhook URL — set TESTING_AGENT_URL in invoice_processor to this base URL"
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+
+  ProjectsTableName:
+    Description: "DynamoDB projects table name"
+    Value: !Ref ProjectsTable
+
+  ResultsTableName:
+    Description: "DynamoDB results table name"
+    Value: !Ref ResultsTable
+
+  JobsTableName:
+    Description: "DynamoDB jobs table name"
+    Value: !Ref JobsTable

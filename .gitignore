@@ -51,3 +51,6 @@ data/db/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# ── AWS SAM ───────────────────────────────────────────────────────────────────
+.aws-sam/

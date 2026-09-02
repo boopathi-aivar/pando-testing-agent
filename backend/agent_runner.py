@@ -4,12 +4,14 @@ Starts a test job in a background thread, tracks per-step progress in MongoDB,
 and writes the final result when the orchestrator finishes.
 """
 
+import os
+import json
 import uuid
 import threading
 from datetime import datetime, timezone
 
 from agents.orchestrator import run_test
-from tools.mongodb_tools import save_job, get_job, update_job
+from tools.dynamodb_tools import save_job, get_job, update_job
 
 STEP_NAMES = [
     "Collecting inputs from S3",
@@ -86,33 +88,66 @@ def _run_background(job_id: str, project_id: str, invoice_number: str | None) ->
         })
 
 
+def _invoke_processor_lambda(payload: dict) -> None:
+    """
+    Invoke the processor Lambda asynchronously when running in AWS.
+    PROCESSOR_FUNCTION_ARN is injected by SAM template.
+    """
+    import boto3
+    processor_arn = os.environ.get("PROCESSOR_FUNCTION_ARN")
+    if not processor_arn:
+        return
+    try:
+        boto3.client("lambda", region_name=os.environ.get("AWS_REGION", "us-east-1")).invoke(
+            FunctionName=processor_arn,
+            InvocationType="Event",  # fire-and-forget, returns immediately
+            Payload=json.dumps(payload).encode(),
+        )
+        print(f"[AgentRunner] Processor Lambda invoked for job {payload.get('job_id')}")
+    except Exception as e:
+        print(f"[AgentRunner] Failed to invoke processor Lambda: {e}")
+
+
 def start_test_run(project_id: str, invoice_number: str | None = None) -> str:
     """
-    Create a job document in MongoDB, start the orchestrator in a background thread,
+    Create a job document in MongoDB, dispatch the AI pipeline,
     and return the job_id immediately so the caller can poll for status.
+
+    In AWS Lambda  → invokes PandoProcessorFunction asynchronously via boto3.
+    Locally        → spawns a background daemon thread.
     """
     job_id = f"job-{uuid.uuid4().hex[:8]}"
     now = datetime.now(tz=timezone.utc).isoformat()
 
     job = {
-        "job_id": job_id,
-        "project_id": project_id,
+        "job_id":         job_id,
+        "project_id":     project_id,
         "invoice_number": invoice_number,
-        "status": "running",
-        "created_at": now,
-        "steps": [{"name": name, "status": "pending"} for name in STEP_NAMES],
-        "result_id": None,
-        "overall_score": None,
-        "test_status": None,
-        "error": None,
+        "status":         "running",
+        "created_at":     now,
+        "steps":          [{"name": name, "status": "pending"} for name in STEP_NAMES],
+        "result_id":      None,
+        "overall_score":  None,
+        "test_status":    None,
+        "error":          None,
     }
     save_job(job)
 
-    thread = threading.Thread(
-        target=_run_background,
-        args=(job_id, project_id, invoice_number),
-        daemon=True,
-    )
-    thread.start()
+    if os.environ.get("PROCESSOR_FUNCTION_ARN"):
+        # Running in AWS Lambda — use async Lambda invocation
+        _invoke_processor_lambda({
+            "mode":           "run_test",
+            "job_id":         job_id,
+            "project_id":     project_id,
+            "invoice_number": invoice_number,
+        })
+    else:
+        # Running locally — use background thread
+        thread = threading.Thread(
+            target=_run_background,
+            args=(job_id, project_id, invoice_number),
+            daemon=True,
+        )
+        thread.start()
 
     return job_id

@@ -7,15 +7,19 @@ Response:       202 Accepted immediately — validation runs in a background thr
 Lambda must:    fire-and-forget with a 5-second timeout so it doesn't block.
 """
 
+import os
+import json
 import threading
+import uuid
+from datetime import datetime, timezone
+
+import boto3
 from fastapi import APIRouter, Header, HTTPException, status
 
 from config import settings
 from models.intake import IntakePayload
 from agents.intake_processor import process_intake
-from tools.mongodb_tools import save_job, update_job
-from datetime import datetime, timezone
-import uuid
+from tools.dynamodb_tools import save_job, update_job
 
 router = APIRouter(tags=["intake"])
 
@@ -82,12 +86,25 @@ def intake(
         "created_at":     now,
     })
 
-    thread = threading.Thread(
-        target=_run_in_background,
-        args=(job_id, body.model_dump()),
-        daemon=True,
-    )
-    thread.start()
+    processor_arn = os.environ.get("PROCESSOR_FUNCTION_ARN")
+    if processor_arn:
+        # Running in AWS Lambda — invoke processor asynchronously
+        try:
+            boto3.client("lambda", region_name=os.environ.get("AWS_REGION", "us-east-1")).invoke(
+                FunctionName=processor_arn,
+                InvocationType="Event",
+                Payload=json.dumps({"mode": "intake", "job_id": job_id, "intake_data": body.model_dump()}).encode(),
+            )
+        except Exception as exc:
+            print(f"[Intake] Failed to invoke processor Lambda: {exc}")
+    else:
+        # Running locally — use background thread
+        thread = threading.Thread(
+            target=_run_in_background,
+            args=(job_id, body.model_dump()),
+            daemon=True,
+        )
+        thread.start()
 
     return {
         "accepted": True,

@@ -3,8 +3,8 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from database import col_projects
-from tools.mongodb_tools import get_job
+from database import tbl_projects
+from tools.dynamodb_tools import get_job, _from_dynamo
 from agent_runner import start_test_run
 from routers.auth import get_current_user
 
@@ -26,8 +26,8 @@ def run_test(
     _user=Depends(get_current_user),
 ):
     """Start a test run for the given project. Returns job_id to poll for status."""
-    project = col_projects().find_one({"project_id": project_id}, {"_id": 0})
-    if not project:
+    resp = tbl_projects().get_item(Key={"project_id": project_id})
+    if not resp.get("Item"):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail=f"Project '{project_id}' not found")
 
