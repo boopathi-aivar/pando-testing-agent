@@ -25,11 +25,14 @@ import json
 
 import time
 from botocore.exceptions import ClientError
-from config import make_aws_session
+from config import make_source_aws_session
 
 
 def _logs_client():
-    return make_aws_session().client("logs")
+    # The invoice processor Lambda's log group lives in a different AWS
+    # account than this backend, so this uses a cross-account session built
+    # from credentials in Secrets Manager (see config.make_source_aws_session).
+    return make_source_aws_session().client("logs")
 
 
 # ── JSON content classifiers ──────────────────────────────────────────────────

@@ -28,10 +28,13 @@ def pdf_to_markdown(pdf_bytes: bytes) -> str:
 
         for page_num, page in enumerate(doc, start=1):
             try:
-                # Native markdown output (PyMuPDF >= 1.24)
+                # Native markdown output (PyMuPDF >= 1.24). Some PDFs trip an
+                # internal AssertionError in PyMuPDF's markdown renderer (seen
+                # on 1.27.x with certain table/layout structures) — treat
+                # that the same as an unsupported-mode error and fall back.
                 text = page.get_text("markdown")
-            except (TypeError, AttributeError):
-                # Older PyMuPDF — plain text fallback
+            except (TypeError, AttributeError, AssertionError):
+                # Older PyMuPDF, or markdown renderer choked — plain text fallback
                 text = page.get_text("text")
 
             if text.strip():
@@ -40,5 +43,5 @@ def pdf_to_markdown(pdf_bytes: bytes) -> str:
         return "\n\n---\n\n".join(pages)
 
     except Exception as e:
-        print(f"[PDFParser] Conversion failed: {e}")
+        print(f"[PDFParser] Conversion failed: {type(e).__name__}: {e}")
         return ""

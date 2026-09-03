@@ -21,6 +21,7 @@ echo ""
 read -p "INTAKE_API_KEY (shared secret with invoice_processor): " INTAKE_KEY
 read -p "JWT_SECRET_KEY (press Enter for default): " JWT_SECRET
 JWT_SECRET="${JWT_SECRET:-invoice-testing-agent-secret}"
+read -p "FRONTEND_URL (deployed frontend origin, e.g. https://main.xxxx.amplifyapp.com): " FRONTEND_URL
 
 # ── Step 2: Build Docker image ────────────────────────────────────────────────
 echo ""
@@ -39,7 +40,7 @@ sam deploy \
   --parameter-overrides \
     IntakeApiKey="${INTAKE_KEY}" \
     JwtSecretKey="${JWT_SECRET}" \
-    AwsRegion="${AWS_REGION}"
+    FrontendUrl="${FRONTEND_URL}"
 
 # ── Step 4: Print outputs ─────────────────────────────────────────────────────
 echo ""

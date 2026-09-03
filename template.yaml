@@ -15,24 +15,48 @@ Parameters:
   BedrockModelId:
     Type: String
     Default: us.anthropic.claude-sonnet-4-6
-  AwsRegion:
+  FrontendUrl:
     Type: String
+    Description: Deployed frontend origin (e.g. Amplify URL) — allowed for CORS
+    Default: ""
+  SourceAccountRegion:
+    Type: String
+    Description: AWS region where the source account's S3 bucket / CloudWatch log group live
     Default: us-east-1
 
 # ── Shared env vars across both functions ─────────────────────────────────────
+# NOTE: AWS_REGION is a Lambda-reserved environment variable that is set
+# automatically by the runtime — it cannot be overridden via CloudFormation,
+# so it is intentionally omitted here. The backend reads it via
+# os.getenv("AWS_REGION", ...) and Lambda supplies the correct value at runtime.
 Globals:
   Function:
     Environment:
       Variables:
-        PROJECTS_TABLE:   !Ref ProjectsTable
-        RESULTS_TABLE:    !Ref ResultsTable
-        JOBS_TABLE:       !Ref JobsTable
-        JWT_SECRET_KEY:   !Ref JwtSecretKey
-        INTAKE_API_KEY:   !Ref IntakeApiKey
-        BEDROCK_MODEL_ID: !Ref BedrockModelId
-        AWS_REGION:       !Ref AwsRegion
+        PROJECTS_TABLE:             !Ref ProjectsTable
+        RESULTS_TABLE:              !Ref ResultsTable
+        JOBS_TABLE:                 !Ref JobsTable
+        JWT_SECRET_KEY:             !Ref JwtSecretKey
+        INTAKE_API_KEY:             !Ref IntakeApiKey
+        BEDROCK_MODEL_ID:           !Ref BedrockModelId
+        FRONTEND_URL:               !Ref FrontendUrl
+        SOURCE_ACCOUNT_SECRET_NAME: !Ref SourceAccountCredentialsSecret
+        SOURCE_ACCOUNT_REGION:      !Ref SourceAccountRegion
 
 Resources:
+
+  # ── Cross-account credentials (S3 + CloudWatch live in another AWS account) ──
+  # Holds the OTHER account's IAM user access key/secret key as JSON:
+  #   {"AWS_ACCESS_KEY_ID": "...", "AWS_SECRET_ACCESS_KEY": "..."}
+  # The placeholder below is intentionally non-functional — update it after
+  # deploy with the real values via:
+  #   aws secretsmanager put-secret-value --secret-id <name> --secret-string '{"AWS_ACCESS_KEY_ID":"...","AWS_SECRET_ACCESS_KEY":"..."}'
+  SourceAccountCredentialsSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: invoice-testing-agent/source-account-credentials
+      Description: "IAM user access key for the AWS account hosting invoice_processor's S3 bucket and CloudWatch logs"
+      SecretString: '{"AWS_ACCESS_KEY_ID":"REPLACE_ME","AWS_SECRET_ACCESS_KEY":"REPLACE_ME"}'
 
   # ── DynamoDB Tables ───────────────────────────────────────────────────────────
 
@@ -152,6 +176,9 @@ Resources:
                 - !GetAtt ResultsTable.Arn
                 - !Sub "${ResultsTable.Arn}/index/*"
                 - !GetAtt JobsTable.Arn
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref SourceAccountCredentialsSecret
     Metadata:
       DockerContext: ./backend
       Dockerfile:    Dockerfile
@@ -197,6 +224,9 @@ Resources:
                 - bedrock:InvokeModel
                 - bedrock:InvokeModelWithResponseStream
               Resource: "*"
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref SourceAccountCredentialsSecret
     Metadata:
       DockerContext: ./backend
       Dockerfile:    Dockerfile
@@ -222,3 +252,7 @@ Outputs:
   JobsTableName:
     Description: "DynamoDB jobs table name"
     Value: !Ref JobsTable
+
+  SourceAccountSecretName:
+    Description: "Secrets Manager secret holding the source account's IAM credentials — update with real values after deploy"
+    Value: !Ref SourceAccountCredentialsSecret

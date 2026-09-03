@@ -143,10 +143,14 @@ APP_SECRET_NAME = os.environ.get('APP_SECRET_NAME', '')
 
 # ── Pando Testing Agent integration ──────────────────────────────────────────
 # Set these in the Lambda console after deploying the testing agent.
-# TESTING_AGENT_URL     = API Gateway URL from SAM Outputs (e.g. https://xxx.execute-api.ap-south-1.amazonaws.com)
-# TESTING_AGENT_API_KEY = same value as INTAKE_API_KEY in the testing agent backend
+# TESTING_AGENT_URL  = API Gateway URL from SAM Outputs (e.g. https://xxx.execute-api.us-east-1.amazonaws.com)
+# TESTING_AGENT_KEY  = same value as INTAKE_API_KEY in the testing agent backend
+# TESTING_PROJECT_ID = project_id of the matching project in the testing agent (e.g. "ge-freight")
+# Accept both TESTING_AGENT_KEY (current Lambda console name) and the older
+# TESTING_AGENT_API_KEY name for backward compatibility.
 TESTING_AGENT_URL     = os.environ.get('TESTING_AGENT_URL', '')
-TESTING_AGENT_API_KEY = os.environ.get('TESTING_AGENT_API_KEY', '')
+TESTING_AGENT_API_KEY = os.environ.get('TESTING_AGENT_KEY', '') or os.environ.get('TESTING_AGENT_API_KEY', '')
+TESTING_PROJECT_ID    = os.environ.get('TESTING_PROJECT_ID', '')
 
 
 def _post_to_testing_agent(
@@ -164,6 +168,10 @@ def _post_to_testing_agent(
     Timeout is 5 seconds to avoid adding latency to Lambda execution.
     """
     if not TESTING_AGENT_URL or not TESTING_AGENT_API_KEY:
+        logger.info(
+            "[TestingAgent] Skipped — TESTING_AGENT_URL or TESTING_AGENT_KEY "
+            "env var is not set on this Lambda."
+        )
         return
 
     try:
@@ -190,6 +198,16 @@ def _post_to_testing_agent(
             "errors":                 [],
             "warnings":               [],
         }
+        # project_id tells the testing agent which project config to validate
+        # against — without it, intake cannot be routed to a project.
+        if TESTING_PROJECT_ID:
+            body["project_id"] = TESTING_PROJECT_ID
+
+        if not TESTING_PROJECT_ID:
+            logger.warning(
+                "[TestingAgent] TESTING_PROJECT_ID is not set — intake may fail "
+                "to route unless s3_bucket/log_group matching succeeds instead."
+            )
 
         resp = requests.post(
             f"{TESTING_AGENT_URL}/api/intake",
@@ -202,7 +220,7 @@ def _post_to_testing_agent(
         )
         logger.info(
             f"[TestingAgent] Pushed invoice {body['invoice_number']} → "
-            f"status {resp.status_code}"
+            f"status {resp.status_code} | response={resp.text[:300]}"
         )
 
     except Exception as e:

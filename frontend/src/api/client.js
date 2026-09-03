@@ -64,7 +64,7 @@ export async function deleteProject(id) {
   const token = getToken()
   const headers = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
-  const res = await fetch(`/api/projects/${id}`, { method: 'DELETE', headers })
+  const res = await fetch(`${API_BASE}/api/projects/${id}`, { method: 'DELETE', headers })
   if (res.status === 401) { clearAuth(); window.location.href = '/login'; throw new Error('Session expired') }
   if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail ?? `Delete failed: ${res.status}`) }
 }
