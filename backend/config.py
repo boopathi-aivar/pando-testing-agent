@@ -57,6 +57,7 @@ def make_aws_session() -> boto3.Session:
     return boto3.Session(
         aws_access_key_id     = settings.AWS_ACCESS_KEY_ID     or None,
         aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY or None,
+        aws_session_token     = os.getenv("AWS_SESSION_TOKEN") or None,
         region_name           = settings.AWS_REGION,
     )
 
@@ -76,6 +77,7 @@ def _fetch_source_credentials() -> dict:
     return {
         "access_key_id":     secret["AWS_ACCESS_KEY_ID"],
         "secret_access_key": secret["AWS_SECRET_ACCESS_KEY"],
+        "session_token":     secret.get("AWS_SESSION_TOKEN") or secret.get("SESSION_TOKEN") or "",
     }
 
 
@@ -102,8 +104,90 @@ def make_source_aws_session() -> boto3.Session:
     session = boto3.Session(
         aws_access_key_id     = creds["access_key_id"],
         aws_secret_access_key = creds["secret_access_key"],
+        aws_session_token     = creds.get("session_token") or None,
         region_name           = settings.SOURCE_ACCOUNT_REGION,
     )
     _source_session_cache["session"]    = session
     _source_session_cache["fetched_at"] = now
     return session
+
+
+def _classify_sts_error(exc: Exception) -> str:
+    """Map STS/boto errors to a short status. Never include secret material."""
+    code = ""
+    msg = str(exc)
+    if hasattr(exc, "response") and isinstance(exc.response, dict):
+        code = str((exc.response.get("Error") or {}).get("Code") or "")
+    combined = f"{code} {msg}".lower()
+    if any(tok in combined for tok in ("expiredtoken", "expired token", "request has expired")):
+        return "expired"
+    if any(tok in combined for tok in (
+        "invalidclienttokenid", "invalidaccesskeyid",
+        "unrecognizedclient", "the access key id does not exist",
+    )):
+        return "invalid"
+    if "signaturedoesnotmatch" in combined:
+        return "bad_secret"
+    if "security token" in combined and "invalid" in combined:
+        return "expired"
+    return "error"
+
+
+def check_aws_credentials() -> None:
+    """
+    Print whether local/Lambda AWS creds are usable. Does not print keys.
+    STS GetCallerIdentity is the check: valid vs expired vs invalid.
+    """
+    print("\n" + "─" * 60)
+    print("  AWS credentials")
+    print("─" * 60)
+
+    in_lambda = bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+    access_key = (settings.AWS_ACCESS_KEY_ID or os.getenv("AWS_ACCESS_KEY_ID") or "").strip()
+    session_token = bool((os.getenv("AWS_SESSION_TOKEN") or "").strip())
+
+    if in_lambda:
+        print("  Source          : Lambda execution role")
+    elif access_key.startswith("ASIA"):
+        print("  Key type        : temporary STS (ASIA) — these expire")
+        print(f"  Session token   : {'present' if session_token else 'MISSING (required for ASIA keys)'}")
+        if not session_token:
+            print("  ✗  Not usable — ASIA keys need AWS_SESSION_TOKEN in backend/.env")
+            print("     Refresh keys from the AWS console and paste all three values.")
+            print("─" * 60 + "\n")
+            return
+    elif access_key.startswith("AKIA"):
+        print("  Key type        : IAM user (AKIA) — long-lived")
+        print(f"  Session token   : {'present' if session_token else 'not set'}")
+    elif access_key:
+        print("  Key type        : unrecognized prefix")
+    else:
+        print("  Key type        : default credential chain (~/.aws or instance role)")
+
+    try:
+        ident = make_aws_session().client("sts").get_caller_identity()
+        arn = ident.get("Arn") or ""
+        print("  STS             : valid")
+        if arn:
+            print(f"  Identity        : {arn}")
+        print("  ✓  Credentials are active (DynamoDB / Bedrock / this account).")
+        print("     Invoice PDFs still need S3 permission on the Pando bucket.")
+    except Exception as exc:
+        status = _classify_sts_error(exc)
+        if status == "expired":
+            print("  STS             : EXPIRED")
+            print("  ✗  Refresh AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,")
+            print("     and AWS_SESSION_TOKEN in backend/.env, then restart.")
+        elif status == "invalid":
+            print("  STS             : INVALID (key id does not exist)")
+            print("  ✗  Paste a current access key from the AWS console.")
+        elif status == "bad_secret":
+            print("  STS             : SECRET MISMATCH")
+            print("  ✗  Secret key does not match the access key id.")
+        else:
+            print(f"  STS             : FAILED ({status})")
+            print(f"     {type(exc).__name__}: {exc}")
+        if access_key.startswith("ASIA"):
+            print("     Temporary keys expire in hours — all three values must be replaced together.")
+
+    print("─" * 60 + "\n")

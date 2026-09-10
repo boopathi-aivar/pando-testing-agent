@@ -10,15 +10,6 @@ const FEATURES = [
   { icon: CheckCircle, text: 'CloudWatch log analysis & SES report delivery' },
 ]
 
-function AivarIcon({ size = 36 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M14 2L25.5 8.5V19.5L14 26L2.5 19.5V8.5L14 2Z" stroke="white" strokeWidth="1.8" fill="none" strokeLinejoin="round"/>
-      <path d="M9 14.5L12.5 18L19 11" stroke="#A29BFE" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  )
-}
-
 export default function Login() {
   const navigate = useNavigate()
   const [email, setEmail]       = useState('pando@aivar.tech')
@@ -57,11 +48,12 @@ export default function Login() {
 
         {/* Logo */}
         <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <AivarIcon size={40} />
-            <span className="text-white font-bold text-3xl tracking-widest uppercase">Aivar</span>
-          </div>
-          <p className="text-white/40 text-sm mt-2 tracking-widest uppercase font-medium">Pando Testing Agent</p>
+          <img
+            src="/aivar-logo-white.webp"
+            alt="Aivar"
+            className="h-14 w-auto object-contain"
+          />
+          <p className="text-white/40 text-sm mt-3 tracking-widest uppercase font-medium">Pando Testing Agent</p>
         </div>
 
         {/* Hero copy */}
@@ -105,12 +97,12 @@ export default function Login() {
       {/* ── Right login form ─────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col items-center justify-center bg-background px-6 py-12">
         {/* Mobile logo */}
-        <div className="flex items-center gap-2.5 mb-10 lg:hidden">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <path d="M14 2L25.5 8.5V19.5L14 26L2.5 19.5V8.5L14 2Z" stroke="#6C5CE7" strokeWidth="1.8" fill="none" strokeLinejoin="round"/>
-            <path d="M9 14.5L12.5 18L19 11" stroke="#A29BFE" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span className="font-bold text-2xl tracking-widest uppercase" style={{ color: '#6C5CE7' }}>Aivar</span>
+        <div className="mb-10 lg:hidden rounded-2xl px-4 py-3" style={{ background: '#0D1117' }}>
+          <img
+            src="/aivar-logo-white.webp"
+            alt="Aivar"
+            className="h-10 w-auto object-contain"
+          />
         </div>
 
         <div className="w-full max-w-md">
@@ -182,20 +174,6 @@ export default function Login() {
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
-
-          <div className="mt-8 p-4 bg-pando-green-50 border border-pando-green-100 rounded-xl">
-            <p className="text-pando-green text-xs font-semibold mb-2 uppercase tracking-wider">Demo credentials</p>
-            <div className="space-y-1 font-mono text-xs text-pando-green-600">
-              <div className="flex justify-between">
-                <span className="text-text-muted">Email</span>
-                <span className="font-semibold">pando@aivar.tech</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">Password</span>
-                <span className="font-semibold">pando@123</span>
-              </div>
-            </div>
-          </div>
         </div>
 
         <p className="mt-10 text-text-muted text-xs text-center">

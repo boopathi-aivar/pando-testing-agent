@@ -11,3 +11,6 @@ anthropic>=0.40.0
 boto3>=1.34.0
 openpyxl>=3.1.0
 PyMuPDF>=1.24.0
+numpy>=1.26.0
+rapidocr-onnxruntime>=1.2.3
+onnxruntime>=1.17.0

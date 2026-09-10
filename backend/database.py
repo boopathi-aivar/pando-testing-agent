@@ -67,7 +67,8 @@ def ensure_tables() -> None:
     Safe to call on every startup — no-ops when tables exist.
     """
     client = boto3.client("dynamodb", region_name=_AWS_REGION)
-    existing = {t["TableName"] for t in client.list_tables()["TableNames"]}
+    # list_tables()["TableNames"] is a list of strings, not table objects
+    existing = set(client.list_tables().get("TableNames") or [])
 
     # ── pando-projects ────────────────────────────────────────────────────────
     if _PROJECTS_TABLE not in existing:

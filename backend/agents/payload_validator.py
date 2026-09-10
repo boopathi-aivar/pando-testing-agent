@@ -10,6 +10,8 @@ from strands import Agent, tool
 from strands.models.bedrock import BedrockModel
 
 from config import settings
+from services.field_compare import apply_comparison, classify_field
+from services.semantic_match import apply_semantic_equivalence
 
 
 _SYSTEM_PROMPT = """\
@@ -84,13 +86,36 @@ markdown text), treat it as the definitive ground truth for all field values:
   one entry.
 
 ── Validation rules ─────────────────────────────────────────────────────────
-- "correct": exact match or semantically identical
-- "wrong":   value present but incorrect
-- "missing": expected a value but got null or field is absent
+- "correct":     exact match OR semantically identical
+- "wrong":       value present but incorrect
+- "missing":     expected a value but got null or field is absent
+- "unverified":  actual is present but there is no ground-truth expected value.
+                 NEVER mark these as "correct". Do not invent expected_value
+                 strings like "N/A (no PDF ground truth provided)".
+
+Date fields (invoice_date, payment_due_date, due_date, etc.):
+  Same calendar day = "correct" regardless of format.
+  12-Aug-2026, 2026-08-12, 12/08/2026, 08/12/2026, 12 Aug 2026 are the same date.
+  Slash dates may be US or EU; if either reading matches, mark correct.
+
+Vendor / company names:
+  Ignore case, punctuation, and legal suffixes (Inc, LLC, Ltd, Co, Company).
+  MADISON LOGISTICS INC == Madison Logistics
+
+Country fields:
+  US == USA == United States
+
+Charge names:
+  Fuel Surcharge Miles == Fuel Surcharge (same charge, extra qualifier).
+  APPLIANCE PARTS != Base Freight (different charge types).
+
+Amount fields:
+  Same number = "correct" (ignore commas and currency symbols).
 
 ── Mandatory fields ──────────────────────────────────────────────────────────
 - Set is_mandatory=true for every field listed under "Mandatory Fields".
 - If ANY mandatory field is missing, force overall status = "failed".
+  Unverified mandatory fields (value present, no ground truth) do not fail the check.
 
 ── Scoring ───────────────────────────────────────────────────────────────────
 - correct = full weight, wrong = 0, missing = 0
@@ -108,7 +133,7 @@ Respond with ONLY a valid JSON object — no text outside it:
       "field_name": "<name>",
       "expected_value": "<expected or null>",
       "actual_value": "<actual or null>",
-      "status": "correct" | "wrong" | "missing",
+      "status": "correct" | "wrong" | "missing" | "unverified",
       "source_used": "Field Mapping Sheet | Charge Map Sheet | Embedded Prompt Mapping | LLM Response",
       "is_mandatory": true | false
     }
@@ -122,18 +147,14 @@ Respond with ONLY a valid JSON object — no text outside it:
 def compare_field_values(field_name: str, expected: str, actual: str) -> str:
     """
     Compare an expected field value against the actual extracted value.
-    Returns 'correct', 'wrong', or 'missing' based on the comparison.
+    Returns 'correct', 'wrong', 'missing', or 'unverified'.
     field_name: the invoice field being compared
     expected: the expected/reference value
     actual: the value extracted by the Lambda
     """
     if actual is None or actual == "" or actual == "null":
         return "missing"
-    if expected is None:
-        return "correct" if actual else "missing"
-    norm_expected = str(expected).strip().lower().replace("-", "").replace(" ", "")
-    norm_actual   = str(actual).strip().lower().replace("-", "").replace(" ", "")
-    return "correct" if norm_expected == norm_actual else "wrong"
+    return classify_field(field_name, expected, actual)
 
 
 @tool
@@ -190,10 +211,12 @@ def _build_mandatory_result(field_validations: list, mandatory_fields: list) -> 
 
     for v in field_validations:
         if v.get("field_name", "").lower() in mandatory_set:
-            if v.get("status") != "correct":
-                failed_fields.append(v["field_name"])
-            else:
+            status = v.get("status")
+            actual = v.get("actual_value")
+            if status == "correct" or (status == "unverified" and actual not in (None, "", "null")):
                 passed_count += 1
+            else:
+                failed_fields.append(v["field_name"])
 
     # Fields listed as mandatory but not found at all in validations → failed
     validated_names = {v.get("field_name", "").lower() for v in field_validations}
@@ -273,7 +296,7 @@ def _fallback_validation(project_config: dict, log_analysis: dict) -> dict:
 
     validations = []
     for field, actual in field_map.items():
-        status = "missing" if actual is None else "correct"
+        status = classify_field(field, None, actual)
         validations.append({
             "field_name":     field,
             "expected_value": None,
@@ -283,19 +306,13 @@ def _fallback_validation(project_config: dict, log_analysis: dict) -> dict:
             "is_mandatory":   field.lower() in mandatory_set,
         })
 
-    score_result = json.loads(calculate_weighted_score(
-        json.dumps([{"field_name": v["field_name"], "status": v["status"]} for v in validations]),
-        json.dumps(weights or {"charge_fields": 25, "address_fields": 25,
-                               "date_fields": 25, "amount_fields": 25}),
-    ))
-
     result = {
-        "overall_score":   score_result["overall_score"],
-        "status":          score_result["status"],
+        "overall_score":   0.0,
+        "status":          "failed",
         "field_validations": validations,
         "suggestions":     ["Connect field mapping files to enable detailed validation"],
     }
-
+    apply_comparison(result, payload=payload, weights=weights, mandatory_fields=mandatory_fields)
     return _enforce_mandatory(result, mandatory_fields)
 
 
@@ -364,6 +381,17 @@ the field mapping sheet, and the charge mapping. Return the JSON result.
         if start >= 0 and end > start:
             parsed = json.loads(text[start:end])
             if "field_validations" in parsed and "overall_score" in parsed:
+                apply_comparison(
+                    parsed,
+                    payload=log_analysis.get("payload", {}),
+                    weights=project_config.get("scoring_weights"),
+                    mandatory_fields=mandatory_fields,
+                )
+                apply_semantic_equivalence(
+                    parsed,
+                    weights=project_config.get("scoring_weights"),
+                    mandatory_fields=mandatory_fields,
+                )
                 return _enforce_mandatory(parsed, mandatory_fields)
     except Exception as e:
         print(f"[PayloadValidator] Agent error: {e}")

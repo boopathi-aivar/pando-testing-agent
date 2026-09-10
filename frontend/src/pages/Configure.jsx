@@ -81,7 +81,7 @@ export default function Configure() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <StepIndicator steps={STEPS} currentStep={step} />
 
       <div className="bg-white border border-border rounded-2xl shadow-card">
@@ -284,7 +284,7 @@ function Step3({ config, update }) {
 
       <div className="bg-background rounded-xl border border-border p-5">
         <FieldLabel>Mandatory Fields</FieldLabel>
-        <p className="text-text-muted text-xs mb-3">The agent will check that these fields exist in every invoice payload. A missing mandatory field overrides the overall result to <strong>failed</strong>.</p>
+        <p className="text-text-muted text-xs mb-3">The overall score uses these required fields only. Optional fields are still compared for review but do not affect the score. A missing required field also marks the result as <strong>failed</strong>.</p>
         <MandatoryFieldsInput
           fields={config.mandatory_fields}
           onChange={(val) => update('mandatory_fields', val)}

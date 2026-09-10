@@ -17,6 +17,14 @@ import json
 from strands import Agent
 from strands.models.bedrock import BedrockModel
 from config import settings
+from services.cache import content_key, pdf_expected_cache
+from services.field_compare import apply_comparison, classify_field
+from services.semantic_match import apply_semantic_equivalence
+from services.markdown_expected import (
+    merge_expected,
+    parse_expected_from_markdown,
+    usable_expected,
+)
 
 
 # ── System prompts ─────────────────────────────────────────────────────────────
@@ -63,9 +71,46 @@ You receive:
   4. Charge mapping   — per-vendor charge code ↔ charge name lookup table
 
 Validation rules:
-  "correct"  — actual matches expected exactly or is semantically identical
-  "wrong"    — value is present but differs from expected
-  "missing"  — expected a value but actual is null, empty, or absent
+  "correct"     — actual matches expected (semantically identical is enough)
+  "wrong"       — value is present but differs from expected
+  "missing"     — expected a value but actual is null, empty, or absent
+  "unverified"  — actual is present but there is NO ground-truth expected value
+                  (do NOT mark these as "correct")
+
+Date fields (invoice_date, payment_due_date, etc.):
+  Treat as CORRECT when they represent the same calendar day regardless of format.
+  Examples that MUST be "correct":
+    12-Aug-2026  ==  2026-08-12  ==  12/08/2026  ==  08/12/2026  ==  12 Aug 2026
+  Slash dates may be US (MM/DD) or EU (DD/MM). If either reading is the same
+  day as the other value, mark correct. Do not fail hyphen vs slash vs month name.
+
+Vendor / company names:
+  Ignore case, punctuation, and legal suffixes (Inc, LLC, Ltd, Co, Company).
+  MADISON LOGISTICS INC == Madison Logistics
+  M & M Cartage Co., Inc. == M & M CARTAGE COMPANY INC
+
+Country fields:
+  ISO code, ISO3, and English name are the same.
+  US == USA == United States
+
+Charge names:
+  Same charge type = CORRECT even if one side has extra qualifier words.
+  Fuel Surcharge Miles == Fuel Surcharge
+  Fuel Surcharge Fee == Fuel Surcharge
+  Different charge types stay WRONG: APPLIANCE PARTS != Base Freight
+
+Amount fields:
+  Treat as CORRECT when the numeric value matches (ignore currency symbols and commas).
+  2,435.00 == 2435 == 2435.0
+
+If EXPECTED is null / missing / "N/A" / "no PDF ground truth":
+  - actual present → status "unverified", expected_value null
+  - actual empty   → status "missing"
+  Never write expected_value as "N/A (no PDF ground truth provided)" and then mark correct.
+
+Mandatory fields rule:
+  If ANY mandatory field is missing or wrong → force status = "failed" regardless of score.
+  Unverified mandatory fields (value present, no ground truth) do not fail the mandatory check.
 
 Charge validation:
   Each charge in the charge mapping must appear in the actual payload's custom_fields,
@@ -74,9 +119,6 @@ Charge validation:
 Scoring (weights from project config):
   charge_fields: 25%  |  address_fields: 25%  |  date_fields: 25%  |  amount_fields: 25%
   passed ≥ 85  |  warning ≥ 60  |  failed < 60
-
-Mandatory fields rule:
-  If ANY mandatory field is missing or wrong → force status = "failed" regardless of score.
 
 Generate specific, actionable suggestions for improving the Lambda's LLM prompt
 for every wrong or missing field (explain what instruction to add or change).
@@ -90,7 +132,7 @@ Respond with ONLY a valid JSON object — no text outside it:
       "field_name":     "<name>",
       "expected_value": "<from PDF or mapping>",
       "actual_value":   "<from Lambda payload>",
-      "status":         "correct" | "wrong" | "missing",
+      "status":         "correct" | "wrong" | "missing" | "unverified",
       "source_used":    "Invoice PDF" | "Field Mapping Sheet" | "Charge Map Sheet",
       "is_mandatory":   true | false
     }
@@ -114,13 +156,25 @@ def _make_model() -> BedrockModel:
 
 def _extract_expected_from_pdf(pdf_markdown: str) -> dict:
     """
-    Use Claude to read the invoice PDF text and extract exact expected field values.
-    Returns {field_name: expected_value, ...} or {} if extraction fails.
+    Build expected JSON from invoice markdown.
+
+    1. Always parse labeled fields from the markdown (OCR / native text).
+    2. Try Claude on the same markdown.
+    3. If Claude errors or returns nothing, keep the parsed content.
+       Never invent expected from the Lambda payload.
     """
+    parsed = parse_expected_from_markdown(pdf_markdown)
     if not pdf_markdown or not pdf_markdown.strip():
         print("[ScoringAgent] No PDF content — skipping expected-value extraction.")
-        return {}
+        return parsed
 
+    cache_id = content_key("pdf-expected", pdf_markdown)
+    cached = pdf_expected_cache.get(cache_id)
+    if cached is not None and usable_expected(cached):
+        print(f"[ScoringAgent] PDF expected values cache hit ({len(cached)} fields).")
+        return cached
+
+    llm: dict = {}
     try:
         agent = Agent(model=_make_model(), tools=[], system_prompt=_EXTRACTION_PROMPT)
         result = agent(
@@ -131,13 +185,29 @@ def _extract_expected_from_pdf(pdf_markdown: str) -> dict:
         start = text.find("{")
         end = text.rfind("}") + 1
         if start >= 0 and end > start:
-            parsed = json.loads(text[start:end])
-            print(f"[ScoringAgent] Extracted {len(parsed)} expected fields from PDF.")
-            return parsed
+            llm = json.loads(text[start:end])
+            if not isinstance(llm, dict):
+                llm = {}
+            print(f"[ScoringAgent] LLM extracted {len(llm)} expected fields from PDF.")
     except Exception as e:
-        print(f"[ScoringAgent] PDF extraction failed: {e}")
+        print(f"[ScoringAgent] PDF extraction LLM failed — using parsed markdown: {e}")
+        llm = {}
 
-    return {}
+    if not usable_expected(llm):
+        print(
+            f"[ScoringAgent] LLM expected empty/unusable — "
+            f"using parsed markdown ({len(parsed)} fields)."
+        )
+        expected = parsed
+    else:
+        expected = merge_expected(parsed, llm)
+
+    if usable_expected(expected):
+        pdf_expected_cache.set(cache_id, expected)
+        print(f"[ScoringAgent] Expected fields ready: {list(expected.keys())}")
+    else:
+        print("[ScoringAgent] No usable expected values from markdown or LLM.")
+    return expected
 
 
 # ── Mandatory field helpers ────────────────────────────────────────────────────
@@ -151,7 +221,9 @@ def _build_mandatory_result(field_validations: list, mandatory_fields: list) -> 
 
     for v in field_validations:
         if v.get("field_name", "").lower() in mandatory_set:
-            if v.get("status") == "correct":
+            status = v.get("status")
+            actual = v.get("actual_value")
+            if status == "correct" or (status == "unverified" and actual not in (None, "", "null")):
                 passed_count += 1
             else:
                 failed_fields.append(v["field_name"])
@@ -265,12 +337,8 @@ def _fallback_scoring(
 
         if act_val is None or act_val == "" or act_val == "null":
             status = "missing"
-        elif exp_val is None:
-            status = "correct"
         else:
-            ne = str(exp_val).strip().lower().replace("-", "").replace(" ", "")
-            na = str(act_val).strip().lower().replace("-", "").replace(" ", "")
-            status = "correct" if ne == na else "wrong"
+            status = classify_field(field, exp_val, act_val)
 
         validations.append({
             "field_name":     field,
@@ -334,16 +402,22 @@ def run_scoring_agent(
 
     # Phase 2 ─────────────────────────────────────────────────────────────────
     print("[ScoringAgent] Phase 2: Scoring actual vs expected…")
+    weights = project_config.get("scoring_weights")
+    payload = log_analysis.get("payload", {})
     try:
         result = _run_scoring(project_config, input_files, log_analysis, expected_values)
         result["expected_from_pdf"] = expected_values
+        apply_comparison(result, payload=payload, weights=weights, mandatory_fields=mandatory_fields)
+        apply_semantic_equivalence(result, weights=weights, mandatory_fields=mandatory_fields)
         return _enforce_mandatory(result, mandatory_fields)
     except Exception as e:
         print(f"[ScoringAgent] LLM scoring failed, using fallback: {e}")
         result = _fallback_scoring(
-            log_analysis.get("payload", {}),
+            payload,
             expected_values,
             mandatory_fields,
             project_config,
         )
+        apply_comparison(result, payload=payload, weights=weights, mandatory_fields=mandatory_fields)
+        apply_semantic_equivalence(result, weights=weights, mandatory_fields=mandatory_fields)
         return _enforce_mandatory(result, mandatory_fields)

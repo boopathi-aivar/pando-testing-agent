@@ -41,7 +41,7 @@ export default function TagInput({ tags, onChange, placeholder = 'Add email and 
   return (
     <div>
       <div
-        className={`min-h-[42px] flex flex-wrap gap-1.5 p-2 bg-white border-[1.5px] rounded-lg transition-all focus-within:border-pando-green focus-within:shadow-[0_0_0_3px_rgba(0,61,49,0.10)] ${
+        className={`min-h-[42px] flex flex-wrap gap-1.5 p-2 bg-white border-[1.5px] rounded-lg transition-all focus-within:border-pando-green focus-within:shadow-[0_0_0_3px_rgba(108,92,231,0.12)] ${
           error ? 'border-danger' : 'border-border'
         }`}
       >

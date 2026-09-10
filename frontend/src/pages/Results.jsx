@@ -2,29 +2,80 @@ import { useRef, useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   ChevronDown, Copy, Check, Clock, Zap, AlertTriangle,
-  XCircle, CheckCircle, Settings, FileText, Truck,
+  XCircle, CheckCircle, Info, Settings, FileText, Truck, RotateCw, Loader2, Trash2,
 } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useProject } from '../hooks/useProjects'
 import { useResults } from '../hooks/useResults'
-import { getCarriers } from '../api/client'
+import { getCarriers, retestResult, getJobStatus, deleteResult } from '../api/client'
 import ScoreBadge from '../components/results/ScoreBadge'
 import JsonViewer from '../components/results/JsonViewer'
 
 const STATUS_PILL = {
-  passed:  'bg-pando-green-50 text-pando-green-600 border-pando-green-200',
-  warning: 'bg-warning-bg text-warning border-warning/30',
-  failed:  'bg-danger-bg text-danger border-danger/20',
+  passed:   'bg-pando-green-50 text-pando-green-600 border-pando-green-200',
+  warning:  'bg-warning-bg text-warning border-warning/30',
+  failed:   'bg-danger-bg text-danger border-danger/20',
+  unscored: 'bg-[#6C5CE7]/10 text-[#6C5CE7] border-[#6C5CE7]/30',
 }
 
-const STATUS_TABS = ['all', 'passed', 'warning', 'failed']
-const DATE_RANGES = ['Last 24h', 'Last 7d', 'Last 30d', 'All time']
+const STATUS_LABEL = {
+  passed: 'Passed',
+  warning: 'Warning',
+  failed: 'Failed',
+  unscored: 'Not scored',
+}
+
+const STATUS_TABS = ['all', 'passed', 'warning', 'failed', 'unscored']
+
+const ROW_COLS = 'grid items-center gap-x-4 px-5 ' +
+  'grid-cols-[minmax(220px,2fr)_56px_100px_minmax(140px,1fr)_52px_200px]'
+
+function formatTimestamp(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  if (Number.isNaN(d.getTime())) return ts
+  return d.toLocaleString(undefined, {
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  })
+}
 
 // ── Field table ───────────────────────────────────────────────────────────────
 function FieldStatusIcon({ status }) {
-  if (status === 'correct') return <CheckCircle size={14} className="text-success flex-shrink-0" />
-  if (status === 'wrong')   return <XCircle     size={14} className="text-danger  flex-shrink-0" />
+  if (status === 'correct')    return <CheckCircle size={14} className="text-success flex-shrink-0" />
+  if (status === 'wrong')      return <XCircle     size={14} className="text-danger  flex-shrink-0" />
+  if (status === 'unverified') return <Info         size={14} className="text-[#6C5CE7] flex-shrink-0" />
   return <AlertTriangle size={14} className="text-warning flex-shrink-0" />
+}
+
+function fieldRowClass(status) {
+  if (status === 'correct')    return 'border-l-success bg-pando-green-50/30'
+  if (status === 'wrong')      return 'border-l-danger bg-danger-bg/50'
+  if (status === 'unverified') return 'border-l-[#6C5CE7] bg-[#6C5CE7]/5'
+  return 'border-l-warning bg-warning-bg/50'
+}
+
+function fieldValueColor(status) {
+  if (status === 'correct')    return '#16A34A'
+  if (status === 'wrong')      return '#DC2626'
+  if (status === 'unverified') return '#6C5CE7'
+  return '#D97706'
+}
+
+function fieldSummary(result) {
+  if (result.api_status >= 400) return 'Validation skipped'
+  const vals = result.field_validations || []
+  const hasRequired = vals.some((f) => f.is_mandatory)
+  const pool = hasRequired ? vals.filter((f) => f.is_mandatory) : vals
+  const wrong      = pool.filter((f) => f.status === 'wrong').length
+  const missing    = pool.filter((f) => f.status === 'missing').length
+  const unverified = pool.filter((f) => f.status === 'unverified').length
+  const parts = [
+    wrong && `${wrong} wrong`,
+    missing && `${missing} missing`,
+    unverified && `${unverified} unverified`,
+  ].filter(Boolean)
+  if (parts.length) return parts.join(' · ')
+  if (!vals.length) return 'No field checks'
+  return 'All correct'
 }
 
 function ApiStatusBadge({ status }) {
@@ -40,8 +91,26 @@ function ApiStatusBadge({ status }) {
   )
 }
 
-function MandatoryFieldsBar({ mandatoryResult }) {
+function MandatoryFieldsBar({ mandatoryResult, scoreStatus }) {
   if (!mandatoryResult || mandatoryResult.total === 0) return null
+  if (scoreStatus === 'unscored') {
+    return (
+      <div className="flex items-start gap-3 rounded-xl p-3.5 border mb-4 bg-[#6C5CE7]/5 border-[#6C5CE7]/25">
+        <div className="flex-shrink-0 mt-0.5">
+          <Info size={15} className="text-[#6C5CE7]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold text-[#6C5CE7]">
+            Mandatory fields — {mandatoryResult.passed}/{mandatoryResult.total} in the payload
+          </p>
+          <p className="text-text-muted text-xs mt-1">
+            Not scored: the invoice PDF was not available, so there is no expected/ground truth to compare against.
+            Re-run once S3 (or the local PDF override) can fetch the file.
+          </p>
+        </div>
+      </div>
+    )
+  }
   const allPassed = mandatoryResult.failed === 0
   return (
     <div className={`flex items-start gap-3 rounded-xl p-3.5 border mb-4 ${
@@ -71,8 +140,14 @@ function MandatoryFieldsBar({ mandatoryResult }) {
 }
 
 function FieldTable({ validations }) {
+  const hasRequired = (validations || []).some((v) => v.is_mandatory)
   return (
     <div className="overflow-x-auto">
+      {hasRequired && (
+        <p className="text-[11px] text-text-muted mb-2">
+          Score is based on <span className="font-semibold text-pando-green">required</span> fields. Optional fields are shown for review only.
+        </p>
+      )}
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b-2 border-border">
@@ -83,11 +158,7 @@ function FieldTable({ validations }) {
         </thead>
         <tbody className="divide-y divide-border">
           {validations.map((v, i) => (
-            <tr key={i} className={`border-l-[3px] ${
-              v.status === 'correct' ? 'border-l-success bg-pando-green-50/30'
-              : v.status === 'wrong' ? 'border-l-danger bg-danger-bg/50'
-              : 'border-l-warning bg-warning-bg/50'
-            }`}>
+            <tr key={i} className={`border-l-[3px] ${fieldRowClass(v.status)}`}>
               <td className="py-2.5 pr-4 pl-2">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-mono text-text-primary text-xs font-semibold">{v.field_name}</span>
@@ -98,8 +169,14 @@ function FieldTable({ validations }) {
                   )}
                 </div>
               </td>
-              <td className="py-2.5 pr-4 font-mono text-text-secondary text-xs">{v.expected_value ?? '—'}</td>
-              <td className="py-2.5 pr-4 font-mono text-xs font-medium" style={{ color: v.status === 'correct' ? '#16A34A' : v.status === 'wrong' ? '#DC2626' : '#D97706' }}>
+              <td className="py-2.5 pr-4 font-mono text-text-secondary text-xs">
+                {v.expected_value ?? (
+                  v.status === 'unverified'
+                    ? <span className="text-text-muted italic">no ground truth</span>
+                    : '—'
+                )}
+              </td>
+              <td className="py-2.5 pr-4 font-mono text-xs font-medium" style={{ color: fieldValueColor(v.status) }}>
                 {v.actual_value ?? <span className="text-warning italic">missing</span>}
               </td>
               <td className="py-2.5 pr-4">
@@ -131,21 +208,68 @@ function CopyableText({ text }) {
 }
 
 // ── Expandable result row ─────────────────────────────────────────────────────
-function ResultRow({ result }) {
+function ResultRow({ result, onRetestDone, onDeleted }) {
   const [expanded, setExpanded] = useState(false)
   const [activeTab, setActiveTab] = useState('fields')
+  const [retesting, setRetesting] = useState(false)
+  const [retestError, setRetestError] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const contentRef = useRef(null)
 
   const handleToggle = () => {
+    setConfirmDelete(false)
     const el = contentRef.current
     if (el) el.style.maxHeight = !expanded ? el.scrollHeight + 'px' : '0px'
     setExpanded((v) => !v)
   }
 
-  const wrongCount   = result.field_validations.filter((f) => f.status === 'wrong').length
-  const missingCount = result.field_validations.filter((f) => f.status === 'missing').length
-  const summary = [wrongCount && `${wrongCount} wrong`, missingCount && `${missingCount} missing`]
-    .filter(Boolean).join(' · ') || 'All correct'
+  const handleRetest = async (e) => {
+    e.stopPropagation()
+    if (retesting) return
+    setConfirmDelete(false)
+    setRetestError(null)
+    setRetesting(true)
+    try {
+      const { job_id } = await retestResult(result.project_id, result.result_id)
+      let job = { status: 'running' }
+      for (let i = 0; i < 90; i += 1) {
+        await new Promise((r) => setTimeout(r, 4000))
+        job = await getJobStatus(job_id)
+        if (job.status === 'complete' || job.status === 'failed') break
+      }
+      if (job.status === 'failed') {
+        setRetestError(job.error || 'Retest failed')
+      } else {
+        onRetestDone?.()
+      }
+    } catch (err) {
+      setRetestError(err.message || 'Retest failed')
+    } finally {
+      setRetesting(false)
+    }
+  }
+
+  const handleDelete = async (e) => {
+    e.stopPropagation()
+    if (deleting || retesting) return
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      return
+    }
+    setDeleting(true)
+    try {
+      await deleteResult(result.project_id, result.result_id)
+      onDeleted?.()
+    } catch (err) {
+      setRetestError(err.message || 'Delete failed')
+      setConfirmDelete(false)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const summary = fieldSummary(result)
 
   const mandatoryFailed = result.mandatory_fields_result?.failed > 0
 
@@ -157,40 +281,75 @@ function ResultRow({ result }) {
   ]
 
   return (
-    <div className="bg-white border border-border rounded-2xl overflow-hidden mb-3 shadow-card hover:shadow-card-hover transition-shadow">
+    <div className="bg-white border border-border rounded-2xl overflow-hidden mb-2 shadow-card hover:shadow-card-hover transition-shadow">
       <div
-        className="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-background/60 transition-colors"
+        className={`${ROW_COLS} min-h-[72px] cursor-pointer hover:bg-background/60 transition-colors`}
         onClick={handleToggle}
       >
-        <div className="min-w-0 flex-1">
-          <p className="font-mono font-bold text-text-primary text-sm">{result.invoice_number}</p>
-          <p className="text-text-muted text-xs mt-0.5 flex items-center gap-1">
-            <Clock size={10} /> {result.timestamp}
+        <div className="min-w-0 py-3">
+          <p className="font-mono font-bold text-text-primary text-sm truncate">{result.invoice_number}</p>
+          <p className="text-text-muted text-xs mt-0.5 flex items-center gap-1.5 min-w-0">
+            <Clock size={10} className="flex-shrink-0" />
+            <span className="truncate">{formatTimestamp(result.timestamp)}</span>
+            {result.vendor_name && (
+              <>
+                <span className="text-border">·</span>
+                <Truck size={10} className="flex-shrink-0" />
+                <span className="truncate">{result.vendor_name}</span>
+              </>
+            )}
           </p>
-          {result.vendor_name && (
-            <p className="text-text-muted text-[10px] mt-0.5 flex items-center gap-1">
-              <Truck size={9} /> {result.vendor_name}
-            </p>
-          )}
         </div>
 
-        <ScoreBadge score={result.overall_score} size={48} />
+        <div className="flex justify-center">
+          <ScoreBadge score={result.status === 'unscored' ? null : result.overall_score} size={44} />
+        </div>
 
-        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border capitalize ${STATUS_PILL[result.status]}`}>
-          {result.status}
-        </span>
-
-        <p className="text-text-muted text-xs hidden md:block min-w-[100px]">{summary}</p>
-
-        <ApiStatusBadge status={result.api_status} />
-
-        {mandatoryFailed && (
-          <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 bg-danger-bg border border-danger/20 text-danger text-[10px] font-bold rounded-full flex-shrink-0">
-            <XCircle size={9} /> mandatory
+        <div>
+          <span className={`inline-flex items-center justify-center min-w-[88px] px-2 py-0.5 rounded-full text-xs font-semibold border capitalize ${STATUS_PILL[result.status] || STATUS_PILL.failed}`}>
+            {STATUS_LABEL[result.status] || result.status}
           </span>
-        )}
+        </div>
 
-        <ChevronDown size={16} className={`text-text-muted transition-transform duration-200 flex-shrink-0 ${expanded ? 'rotate-180' : ''}`} />
+        <p className="text-text-muted text-xs truncate">{summary}</p>
+
+        <div className="flex justify-center">
+          {result.api_status
+            ? <ApiStatusBadge status={result.api_status} />
+            : <span className="text-text-muted text-[10px]">—</span>}
+        </div>
+
+        <div className="flex items-center justify-end gap-1.5">
+          {mandatoryFailed && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-danger-bg border border-danger/20 text-danger text-[10px] font-bold rounded-full flex-shrink-0">
+              <XCircle size={9} />
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleRetest}
+            disabled={retesting || deleting}
+            title="Re-run this invoice with the latest scoring rules"
+            className="inline-flex items-center justify-center gap-1 h-8 px-2.5 rounded-lg text-[11px] font-semibold text-text-secondary border border-border hover:border-pando-green hover:text-pando-green disabled:opacity-50"
+          >
+            {retesting ? <Loader2 size={12} className="animate-spin" /> : <RotateCw size={12} />}
+            {retesting ? 'Re-running' : 'Re-run'}
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting || retesting}
+            title={confirmDelete ? 'Click again to confirm delete' : 'Delete this invoice result'}
+            className={`inline-flex items-center justify-center h-8 w-8 rounded-lg border disabled:opacity-50 ${
+              confirmDelete
+                ? 'text-white bg-danger border-danger'
+                : 'text-text-muted border-border hover:border-danger hover:text-danger'
+            }`}
+          >
+            {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+          </button>
+          <ChevronDown size={16} className={`text-text-muted transition-transform duration-200 flex-shrink-0 ${expanded ? 'rotate-180' : ''}`} />
+        </div>
       </div>
 
       <div ref={contentRef} style={{ maxHeight: 0, overflow: 'hidden', transition: 'max-height 0.3s ease' }}>
@@ -212,6 +371,11 @@ function ResultRow({ result }) {
           </div>
 
           <div className="p-5">
+            {retestError && (
+              <div className="bg-danger-bg border border-danger/20 rounded-xl p-3 mb-4 text-danger text-xs font-medium">
+                {retestError}
+              </div>
+            )}
             {activeTab === 'fields' && (
               <>
                 {result.api_status >= 400 ? (
@@ -238,7 +402,7 @@ function ResultRow({ result }) {
                   </div>
                 ) : (
                   <>
-                    <MandatoryFieldsBar mandatoryResult={result.mandatory_fields_result} />
+                    <MandatoryFieldsBar mandatoryResult={result.mandatory_fields_result} scoreStatus={result.status} />
                     <FieldTable validations={result.field_validations} />
                   </>
                 )}
@@ -338,7 +502,6 @@ export default function Results() {
   const [statusFilter,  setStatusFilter]  = useState('all')
   const [carrierFilter, setCarrierFilter] = useState('all')
   const [invoiceSearch, setInvoiceSearch] = useState('')
-  const [dateRange,     setDateRange]     = useState('Last 7d')
   const [carriers, setCarriers] = useState([])
 
   // Load available carriers for this project
@@ -355,24 +518,20 @@ export default function Results() {
     invoice: invoiceSearch || undefined,
   })
 
-  const chartData = [...results].reverse().map((r) => ({
-    time: r.timestamp,
-    score: r.overall_score,
-    status: r.status,
-  }))
+  const refreshList = async () => {
+    await refetch({ silent: true })
+    if (!projectId) return
+    getCarriers(projectId)
+      .then((data) => setCarriers(data.carriers ?? []))
+      .catch(() => setCarriers([]))
+  }
 
   const scoreStatus = project?.last_score != null
     ? project.last_score >= 85 ? 'passed' : project.last_score >= 60 ? 'warning' : 'failed'
     : null
 
-  const CustomDot = (props) => {
-    const { cx, cy, payload } = props
-    const color = payload.score >= 85 ? '#16A34A' : payload.score >= 60 ? '#D97706' : '#DC2626'
-    return <circle key={`dot-${cx}-${cy}`} cx={cx} cy={cy} r={5} fill={color} stroke="white" strokeWidth={2} />
-  }
-
   return (
-    <div className="p-6 max-w-[1200px]">
+    <div>
       {/* Header card */}
       <div className="bg-white border border-border rounded-2xl shadow-card px-6 py-5 mb-6">
         <div className="flex items-start justify-between gap-4">
@@ -381,7 +540,7 @@ export default function Results() {
             <div className="flex items-center gap-3 mt-2 flex-wrap">
               {project?.last_tested && (
                 <span className="text-text-muted text-sm flex items-center gap-1.5">
-                  <Clock size={13} /> Last tested: {project.last_tested}
+                  <Clock size={13} /> Last tested: {formatTimestamp(project.last_tested)}
                 </span>
               )}
               {scoreStatus && (
@@ -389,6 +548,7 @@ export default function Results() {
                   {scoreStatus}
                 </span>
               )}
+              <span className="text-text-muted text-xs">Score uses required fields only</span>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -402,30 +562,9 @@ export default function Results() {
         </div>
       </div>
 
-      {/* Score trend chart */}
-      {chartData.length > 0 && (
-        <div className="bg-white border border-border rounded-2xl shadow-card px-6 py-5 mb-6">
-          <p className="text-text-primary text-sm font-bold mb-4">Score Trend</p>
-          <ResponsiveContainer width="100%" height={170}>
-            <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E8EAED" vertical={false} />
-              <XAxis dataKey="time" stroke="#E8EAED" tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} stroke="#E8EAED" tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
-              <Tooltip
-                contentStyle={{ background: '#fff', border: '1px solid #E8EAED', borderRadius: 12, fontSize: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.10)' }}
-                labelStyle={{ color: '#4B5563', fontWeight: 600 }}
-                itemStyle={{ color: '#6C5CE7' }}
-              />
-              <Line type="monotone" dataKey="score" stroke="#6C5CE7" strokeWidth={2.5} dot={<CustomDot />} activeDot={{ r: 6, fill: '#6C5CE7', stroke: 'white', strokeWidth: 2 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
       {/* Filter bar */}
       <div className="sticky top-14 z-10 bg-background pb-4 pt-0.5 space-y-3">
-        {/* Row 1: search + status tabs + date range */}
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
           <input
             type="text"
             placeholder="Search by invoice number..."
@@ -442,13 +581,10 @@ export default function Results() {
                   statusFilter === s ? 'bg-pando-green text-white shadow-sm' : 'text-text-secondary hover:text-pando-green'
                 }`}
               >
-                {s}
+                {s === 'unscored' ? 'Not scored' : s}
               </button>
             ))}
           </div>
-          <select value={dateRange} onChange={(e) => setDateRange(e.target.value)} className="text-sm py-1.5">
-            {DATE_RANGES.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
           <button
             onClick={refetch}
             className="ml-auto text-xs text-text-muted hover:text-pando-green font-medium underline underline-offset-2 transition-colors"
@@ -457,11 +593,10 @@ export default function Results() {
           </button>
         </div>
 
-        {/* Row 2: carrier pills (only when there are carriers) */}
         {carriers.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="flex items-center gap-1 text-text-muted text-xs font-medium">
-              <Truck size={12} /> Carrier:
+            <span className="flex items-center gap-1 text-text-muted text-xs font-medium shrink-0">
+              <Truck size={12} /> Carrier
             </span>
             {['all', ...carriers].map((c) => (
               <button
@@ -500,7 +635,21 @@ export default function Results() {
           </p>
         </div>
       ) : (
-        <div>{results.map((r) => <ResultRow key={r.result_id} result={r} />)}</div>
+        <div className="overflow-x-auto">
+          <div className="min-w-[860px]">
+            <div className={`${ROW_COLS} h-8 text-[11px] font-semibold uppercase tracking-wider text-text-muted`}>
+              <span>Invoice</span>
+              <span className="text-center" title="Required fields only">Score</span>
+              <span>Status</span>
+              <span>Findings</span>
+              <span className="text-center">HTTP</span>
+              <span className="text-right pr-1">Actions</span>
+            </div>
+            {results.map((r) => (
+              <ResultRow key={r.result_id} result={r} onRetestDone={refreshList} onDeleted={refreshList} />
+            ))}
+          </div>
+        </div>
       )}
 
     </div>

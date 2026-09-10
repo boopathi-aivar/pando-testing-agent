@@ -49,7 +49,7 @@ export default function Projects() {
   )
 
   return (
-    <div className="p-6 max-w-[1400px]">
+    <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-text-primary font-bold text-base">All Projects</h2>
@@ -84,7 +84,7 @@ export default function Projects() {
       )}
 
       {loading ? (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : filtered.length === 0 ? (
@@ -96,7 +96,7 @@ export default function Projects() {
           <p className="text-sm mt-1">Try adjusting your search or create a new project.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map((p) => (
             <ProjectCard key={p.project_id} project={p} onDelete={handleDelete} />
           ))}

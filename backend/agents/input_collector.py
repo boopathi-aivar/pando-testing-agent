@@ -8,9 +8,13 @@ Plain text / CSV files are returned as-is.
 """
 
 import json
-from services.s3 import get_object, get_binary, object_exists
+import os
+from pathlib import Path
+
+from services.s3 import get_object, get_binary
 from services.excel_parser import parse_field_mapping, parse_charge_mapping
-from services.pdf_parser import pdf_to_markdown
+from services.pdf_parser import parse_pdf
+from services.cache import content_key, excel_mapping_cache, pdf_markdown_cache
 
 
 def run_input_collector(project_config: dict, vendor_ref_id: str = "") -> dict:
@@ -46,10 +50,6 @@ def run_input_collector(project_config: dict, vendor_ref_id: str = "") -> dict:
         slot_id = slot["id"]
 
         try:
-            if not object_exists(bucket, key):
-                missing.append(slot_id)
-                continue
-
             if key.lower().endswith((".xlsx", ".xls")):
                 _collect_excel(collected, slot_id, bucket, key, vendor_ref_id)
             else:
@@ -72,41 +72,90 @@ def run_input_collector(project_config: dict, vendor_ref_id: str = "") -> dict:
 
 
 def collect_invoice_pdf(payload: dict) -> str:
-    """
-    Download the invoice PDF referenced in payload.custom and convert it to markdown.
+    """Download + convert the invoice PDF. Returns markdown for scoring."""
+    return (collect_invoice_pdf_parsed(payload).get("markdown") or "")
 
-    Reads:
-      payload.custom.attachment_bucket  — S3 bucket
-      payload.custom.attachment_key     — S3 key  (e.g. "invoice/input/abc.pdf")
 
-    Returns the markdown string, or "" if the PDF is missing / unreadable.
+def collect_invoice_pdf_parsed(payload: dict) -> dict:
     """
+    Download the invoice PDF referenced in payload.custom and parse it.
+
+    Set LOCAL_INVOICE_PDF=true and LOCAL_INVOICE_PDF_PATH=/path/to/file.pdf
+    to parse a local file instead of S3 (local testing only).
+    """
+    empty = {"markdown": "", "pages": []}
     custom = payload.get("custom") or {}
-    bucket = custom.get("attachment_bucket", "").strip()
-    key    = custom.get("attachment_key", "").strip()
+    bucket = (custom.get("attachment_bucket") or "").strip()
+    key    = (custom.get("attachment_key") or "").strip()
 
-    if not bucket or not key:
-        print("[InputCollector] No attachment_bucket/attachment_key in payload.custom — skipping PDF.")
-        return ""
+    cache_id = content_key("pdf-md", bucket or "local", key or _configured_local_pdf_path() or "")
+    cached = pdf_markdown_cache.get(cache_id)
+    if cached is not None:
+        print(f"[InputCollector] Invoice PDF cache hit")
+        if isinstance(cached, dict):
+            return cached
+        return {"markdown": cached or "", "pages": []}
 
-    try:
-        if not object_exists(bucket, key):
+    pdf_bytes = None
+    source = ""
+
+    local_path = _configured_local_pdf_path()
+    if local_path:
+        try:
+            pdf_bytes = Path(local_path).read_bytes()
+            source = f"local:{local_path}"
+            print(f"[InputCollector] LOCAL_INVOICE_PDF=true — using {local_path}")
+        except Exception as e:
+            print(f"[InputCollector] LOCAL_INVOICE_PDF_PATH unreadable ({local_path}): {e}")
+            return empty
+
+    if not pdf_bytes:
+        if not bucket or not key:
+            print("[InputCollector] No attachment_bucket/attachment_key in payload.custom — skipping PDF.")
+            return empty
+        try:
+            pdf_bytes = get_binary(bucket, key)
+            source = f"s3://{bucket}/{key}"
+        except FileNotFoundError:
             print(f"[InputCollector] Invoice PDF not found: s3://{bucket}/{key}")
-            return ""
+            return empty
+        except Exception as e:
+            print(f"[InputCollector] PDF fetch/convert failed: {e}")
+            return empty
 
-        pdf_bytes = get_binary(bucket, key)
-        markdown  = pdf_to_markdown(pdf_bytes)
+    parsed = parse_pdf(pdf_bytes)
+    markdown = parsed.get("markdown") or ""
+    n_boxes = sum(len(p.get("items") or []) for p in parsed.get("pages") or [])
 
-        if markdown:
-            print(f"[InputCollector] Invoice PDF converted — {len(markdown)} chars — s3://{bucket}/{key}")
-        else:
-            print(f"[InputCollector] PDF downloaded but produced no text: s3://{bucket}/{key}")
+    if markdown:
+        print(
+            f"[InputCollector] Invoice PDF converted — {len(markdown)} chars, "
+            f"{n_boxes} boxes — {source}"
+        )
+        pdf_markdown_cache.set(cache_id, parsed)
+    else:
+        print(f"[InputCollector] PDF produced no readable content ({source})")
 
-        return markdown
+    return parsed
 
-    except Exception as e:
-        print(f"[InputCollector] PDF fetch/convert failed: {e}")
-        return ""
+
+def _configured_local_pdf_path() -> str | None:
+    """Explicit local file when LOCAL_INVOICE_PDF=true and PATH is set."""
+    flag = os.getenv("LOCAL_INVOICE_PDF", "").strip().lower()
+    if flag not in ("1", "true", "yes", "on"):
+        return None
+    raw = (os.getenv("LOCAL_INVOICE_PDF_PATH") or "").strip()
+    if not raw:
+        print("[InputCollector] LOCAL_INVOICE_PDF=true but LOCAL_INVOICE_PDF_PATH is empty")
+        return None
+    path = Path(raw)
+    if not path.is_absolute():
+        root = Path(__file__).resolve().parents[2]
+        path = (root / raw).resolve()
+    if not path.is_file():
+        print(f"[InputCollector] LOCAL_INVOICE_PDF_PATH not found: {path}")
+        return None
+    return str(path)
 
 
 def _collect_excel(
@@ -117,26 +166,37 @@ def _collect_excel(
     vendor_ref_id: str,
 ) -> None:
     """Download and parse an Excel workbook; store result as JSON string."""
+    cache_id = content_key("excel", bucket, key, vendor_ref_id or "")
+    cached = excel_mapping_cache.get(cache_id)
+    if cached is not None:
+        collected[slot_id] = cached
+        print(f"[InputCollector] Excel cache hit — vendor={vendor_ref_id} slot={slot_id}")
+        return
+
     excel_bytes = get_binary(bucket, key)
 
     if not vendor_ref_id:
-        collected[slot_id] = json.dumps({
+        payload = json.dumps({
             "type": "excel_mapping",
             "note": "vendor_ref_id not provided — cannot select vendor sheet",
             "field_mapping":  [],
             "charge_mapping": [],
         })
+        excel_mapping_cache.set(cache_id, payload)
+        collected[slot_id] = payload
         return
 
     field_rules    = parse_field_mapping(excel_bytes, vendor_ref_id)
     charge_rules   = parse_charge_mapping(excel_bytes, vendor_ref_id)
 
-    collected[slot_id] = json.dumps({
+    payload = json.dumps({
         "type":           "excel_mapping",
         "vendor_ref_id":  vendor_ref_id,
         "field_mapping":  field_rules,
         "charge_mapping": charge_rules,
     })
+    excel_mapping_cache.set(cache_id, payload)
+    collected[slot_id] = payload
 
     print(
         f"[InputCollector] Excel parsed — vendor={vendor_ref_id} "

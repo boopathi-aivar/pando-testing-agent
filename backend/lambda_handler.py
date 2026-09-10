@@ -30,6 +30,9 @@ def processor_handler(event: dict, context) -> dict:
 
       Intake (push mode from Lambda):
         { "mode": "intake", "job_id": "...", "intake_data": { <IntakePayload dict> } }
+
+      Retest (stored result):
+        { "mode": "retest", "job_id": "...", "result_id": "..." }
     """
     from tools.dynamodb_tools import update_job
 
@@ -64,6 +67,25 @@ def processor_handler(event: dict, context) -> dict:
         elif mode == "intake":
             from agents.intake_processor import process_intake
             result = process_intake(event["intake_data"])
+            if "error" in result:
+                update_job(job_id, {
+                    "status": "failed",
+                    "error": result["error"],
+                    "completed_at": now,
+                })
+            else:
+                update_job(job_id, {
+                    "status":        "complete",
+                    "result_id":     result.get("result_id"),
+                    "overall_score": result.get("overall_score"),
+                    "test_status":   result.get("status"),
+                    "project_id":    result.get("project_id"),
+                    "completed_at":  now,
+                })
+
+        elif mode == "retest":
+            from agents.intake_processor import retest_from_stored_result
+            result = retest_from_stored_result(event["result_id"])
             if "error" in result:
                 update_job(job_id, {
                     "status": "failed",

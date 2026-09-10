@@ -148,7 +148,7 @@ export default function SettingsPage() {
   const visible = projects.filter((p) => !deletedIds.has(p.project_id))
 
   return (
-    <div className="p-6 max-w-[1200px]">
+    <div>
       {/* Page header */}
       <div className="mb-6">
         <h1 className="text-text-primary font-bold text-lg">Settings</h1>

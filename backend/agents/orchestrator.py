@@ -21,7 +21,7 @@ from tools.dynamodb_tools import (
     update_project_last_tested,
     _from_dynamo,
 )
-from agents.input_collector import run_input_collector, collect_invoice_pdf
+from agents.input_collector import run_input_collector, collect_invoice_pdf_parsed
 from agents.log_analyzer import run_log_analyzer
 from agents.payload_validator import run_payload_validator
 from database import tbl_projects
@@ -166,11 +166,19 @@ def run_test(project_id: str, invoice_number: str | None = None) -> dict:
 
         # Collect mapping files (vendor-keyed Excel) + fetch invoice PDF
         input_files = run_input_collector(project_config, vendor_ref_id=vendor_ref_id)
-        log_analysis["invoice_pdf"] = collect_invoice_pdf(log_analysis.get("payload", {}))
+        parsed_pdf = collect_invoice_pdf_parsed(log_analysis.get("payload", {}))
+        log_analysis["invoice_pdf"] = parsed_pdf.get("markdown") or ""
+        log_analysis["invoice_pdf_layout"] = parsed_pdf.get("pages") or []
 
         if api_status and api_status >= 400:
-            print(f"[Orchestrator] Invoice {idx} ({invoice_num}) — API error {api_status}, skipping validation.")
-            test_result = _api_error_result(project_id, log_analysis)
+            print(f"[Orchestrator] Invoice {idx} ({invoice_num}) — API error {api_status}, still parsing PDF content.")
+            test_result = _validated_result(project_id, project_config, input_files, log_analysis)
+            test_result["status"] = "failed"
+            test_result["overall_score"] = 0.0
+            tips = test_result.get("prompt_suggestions") or []
+            test_result["prompt_suggestions"] = [
+                f"Fix the API error (HTTP {api_status}) before trusting the payload."
+            ] + list(tips)
         else:
             print(f"[Orchestrator] Invoice {idx} ({invoice_num}) — validating fields…")
             test_result = _validated_result(project_id, project_config, input_files, log_analysis)

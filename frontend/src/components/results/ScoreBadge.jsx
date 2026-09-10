@@ -6,8 +6,8 @@ export default function ScoreBadge({ score, size = 52 }) {
 
   const color =
     score == null ? '#D1D5DB'
-    : score >= 85 ? '#16A34A'
-    : score >= 60 ? '#D97706'
+    : score >= 85 ? '#6C5CE7'
+    : score >= 60 ? '#A29BFE'
     : '#DC2626'
 
   const textColor = score == null ? '#9CA3AF' : color

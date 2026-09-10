@@ -77,14 +77,27 @@ export async function getResults(projectId, filters = {}) {
   return request(`/projects/${projectId}/results${params ? `?${params}` : ''}`)
 }
 
+export async function getDashboardSummary(projectId) {
+  const q = projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''
+  return request(`/dashboard/summary${q}`)
+}
+
 export async function getCarriers(projectId) {
   return request(`/projects/${projectId}/carriers`)
+}
+
+export async function deleteResult(projectId, resultId) {
+  return request(`/projects/${projectId}/results/${resultId}`, { method: 'DELETE' })
 }
 
 // ─── Jobs ─────────────────────────────────────────────────────────────────────
 export async function runTest(projectId, invoiceNumber) {
   const body = invoiceNumber ? { invoice_number: invoiceNumber } : {}
   return request(`/projects/${projectId}/run-test`, { method: 'POST', body: JSON.stringify(body) })
+}
+
+export async function retestResult(projectId, resultId) {
+  return request(`/projects/${projectId}/results/${resultId}/retest`, { method: 'POST' })
 }
 
 export async function getJobStatus(jobId) {
