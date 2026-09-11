@@ -8,9 +8,9 @@ export function useResults(projectId, filters = {}) {
 
   const filtersKey = JSON.stringify(filters)
 
-  const fetch = useCallback(async () => {
+  const fetch = useCallback(async (opts = {}) => {
     if (!projectId) return
-    setLoading(true)
+    if (!opts.silent) setLoading(true)
     setError(null)
     try {
       const data = await getResults(projectId, filters)

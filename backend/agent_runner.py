@@ -151,3 +151,72 @@ def start_test_run(project_id: str, invoice_number: str | None = None) -> str:
         thread.start()
 
     return job_id
+
+
+def _complete_job(job_id: str, result: dict) -> None:
+    now = datetime.now(tz=timezone.utc).isoformat()
+    if "error" in result:
+        update_job(job_id, {
+            "status": "failed",
+            "error": result["error"],
+            "completed_at": now,
+        })
+        return
+    update_job(job_id, {
+        "status":        "complete",
+        "result_id":    result.get("result_id"),
+        "overall_score": result.get("overall_score"),
+        "test_status":  result.get("status"),
+        "completed_at": now,
+    })
+
+
+def _run_retest_background(job_id: str, result_id: str) -> None:
+    try:
+        update_job(job_id, {"status": "running"})
+        from agents.intake_processor import retest_from_stored_result
+        result = retest_from_stored_result(result_id)
+        _complete_job(job_id, result)
+    except Exception as exc:
+        print(f"[AgentRunner] Retest job {job_id} failed: {exc}")
+        update_job(job_id, {
+            "status": "failed",
+            "error": str(exc),
+            "completed_at": datetime.now(tz=timezone.utc).isoformat(),
+        })
+
+
+def start_retest(result_id: str, project_id: str | None = None) -> str:
+    """Re-score a stored result from its raw_payload. Returns job_id."""
+    job_id = f"job-{uuid.uuid4().hex[:8]}"
+    now = datetime.now(tz=timezone.utc).isoformat()
+    job = {
+        "job_id":         job_id,
+        "project_id":     project_id,
+        "result_id":     result_id,
+        "status":         "running",
+        "created_at":     now,
+        "steps":          [{"name": name, "status": "pending"} for name in STEP_NAMES],
+        "overall_score":  None,
+        "test_status":    None,
+        "error":          None,
+        "mode":           "retest",
+    }
+    save_job(job)
+
+    if os.environ.get("PROCESSOR_FUNCTION_ARN"):
+        _invoke_processor_lambda({
+            "mode":       "retest",
+            "job_id":     job_id,
+            "result_id":  result_id,
+            "project_id": project_id,
+        })
+    else:
+        thread = threading.Thread(
+            target=_run_retest_background,
+            args=(job_id, result_id),
+            daemon=True,
+        )
+        thread.start()
+
+    return job_id

@@ -28,7 +28,7 @@ export default function ProjectCard({ project, onDelete }) {
   }
 
   return (
-    <div className="bg-white border border-border rounded-2xl shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200 flex flex-col group overflow-hidden">
+    <div className="bg-surface border border-border rounded-2xl shadow-card hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200 flex flex-col group overflow-hidden">
 
       {/* Clickable body → results page */}
       <div

@@ -81,10 +81,10 @@ export default function Configure() {
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <StepIndicator steps={STEPS} currentStep={step} />
 
-      <div className="bg-white border border-border rounded-2xl shadow-card">
+      <div className="bg-surface border border-border rounded-2xl shadow-card">
         <div className="p-8">
           {step === 0 && <Step1 config={config} update={update} onNameChange={(name) => { update('project_name', name); if (!config.project_id || config.project_id === slugify(config.project_name)) update('project_id', slugify(name)) }} />}
           {step === 1 && <Step2 config={config} updateSlot={updateSlot} addSlot={addSlot} removeSlot={removeSlot} />}
@@ -235,7 +235,7 @@ function MandatoryFieldsInput({ fields, onChange }) {
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2 p-3 bg-white border border-border rounded-xl min-h-[48px] max-h-40 overflow-y-auto focus-within:border-pando-green transition-colors">
+      <div className="flex flex-wrap gap-2 p-3 bg-surface border border-border rounded-xl min-h-[48px] max-h-40 overflow-y-auto focus-within:border-pando-green transition-colors">
         {fields.map((f) => (
           <span key={f} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-pando-green text-white text-xs font-semibold rounded-lg">
             <span className="font-mono">{f}</span>
@@ -284,7 +284,7 @@ function Step3({ config, update }) {
 
       <div className="bg-background rounded-xl border border-border p-5">
         <FieldLabel>Mandatory Fields</FieldLabel>
-        <p className="text-text-muted text-xs mb-3">The agent will check that these fields exist in every invoice payload. A missing mandatory field overrides the overall result to <strong>failed</strong>.</p>
+        <p className="text-text-muted text-xs mb-3">The overall score uses these required fields only. Optional fields are still compared for review but do not affect the score. A missing required field also marks the result as <strong>failed</strong>.</p>
         <MandatoryFieldsInput
           fields={config.mandatory_fields}
           onChange={(val) => update('mandatory_fields', val)}
@@ -378,7 +378,7 @@ function Step4({ config }) {
           <p className="text-text-muted text-sm mb-2">Scoring Weights</p>
           <div className="grid grid-cols-2 gap-2">
             {Object.entries(config.scoring_weights).map(([key, val]) => (
-              <div key={key} className="flex items-center justify-between bg-white rounded-lg px-3 py-1.5 border border-border">
+              <div key={key} className="flex items-center justify-between bg-surface rounded-lg px-3 py-1.5 border border-border">
                 <span className="text-text-secondary text-xs capitalize">{key.replace('_', ' ')}</span>
                 <span className="text-pando-green text-xs font-bold">{val}</span>
               </div>

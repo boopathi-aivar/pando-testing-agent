@@ -41,26 +41,90 @@ except ImportError:
 class ClaudeCostTracker:
     """Centralized cost tracking for Claude API calls."""
     
-    # Claude 3.5 Sonnet pricing (as of 2024)
+    # Claude Sonnet pricing (per token)
     INPUT_TOKEN_COST = 0.000003  # $3 per 1M input tokens
     OUTPUT_TOKEN_COST = 0.000015  # $15 per 1M output tokens
+
+    # Prompt-caching rates (Anthropic on Bedrock), as multiples of the base input rate:
+    #   - cache READ  = 0.10x (same for 5m and 1h TTL)
+    #   - cache WRITE = 1.25x for 5-minute TTL, 2.00x for 1-hour TTL
+    # The 1-hour cache trades a higher write surcharge for a longer-lived prefix.
+    # Ref: AWS Bedrock prompt caching / "1-hour duration for prompt caching" (Jan 2026).
+    CACHE_READ_MULTIPLIER = 0.10
+    CACHE_WRITE_MULTIPLIER_5M = 1.25
+    CACHE_WRITE_MULTIPLIER_1H = 2.00
+    CACHE_READ_TOKEN_COST = INPUT_TOKEN_COST * CACHE_READ_MULTIPLIER
+
+    @classmethod
+    def _cache_write_multiplier(cls) -> float:
+        """Return the cache-write price multiplier for the currently configured TTL."""
+        # PROMPT_CACHE_TTL is a module-level constant defined after this class.
+        ttl = globals().get("PROMPT_CACHE_TTL", "5m")
+        return cls.CACHE_WRITE_MULTIPLIER_1H if ttl == "1h" else cls.CACHE_WRITE_MULTIPLIER_5M
+
+    @property
+    def CACHE_WRITE_MULTIPLIER(self) -> float:
+        return self._cache_write_multiplier()
+
+    @property
+    def CACHE_WRITE_TOKEN_COST(self) -> float:
+        return self.INPUT_TOKEN_COST * self._cache_write_multiplier()
     
     def __init__(self):
         self.total_input_tokens = 0
         self.total_output_tokens = 0
         self.total_cost = 0.0
         self.call_count = 0
+        # Prompt-caching accounting
+        self.total_cache_read_tokens = 0
+        self.total_cache_write_tokens = 0
+        # Baseline cost we WOULD have paid if every cached token was billed at the
+        # full input rate (used to report realized savings from caching).
+        self.total_uncached_baseline_cost = 0.0
         
-    def calculate_cost(self, input_tokens: int, output_tokens: int) -> float:
-        """Calculate cost for a single Claude call."""
+    def calculate_cost(
+        self,
+        input_tokens: int,
+        output_tokens: int,
+        cache_read_tokens: int = 0,
+        cache_write_tokens: int = 0,
+    ) -> float:
+        """Calculate cost for a single Claude call, including prompt-cache tokens.
+
+        Note: when prompt caching is active, Bedrock reports `inputTokens` as ONLY the
+        non-cached tokens. Cache read/write tokens are reported separately and billed at
+        their own (lower / slightly-higher) rates.
+        """
         input_cost = input_tokens * self.INPUT_TOKEN_COST
         output_cost = output_tokens * self.OUTPUT_TOKEN_COST
-        return input_cost + output_cost
+        cache_read_cost = cache_read_tokens * self.CACHE_READ_TOKEN_COST
+        cache_write_cost = cache_write_tokens * self.CACHE_WRITE_TOKEN_COST
+        return input_cost + output_cost + cache_read_cost + cache_write_cost
     
-    def track_call(self, input_tokens: int, output_tokens: int, operation: str = "claude_call"):
-        """Track a Claude API call and log detailed cost information."""
-        cost = self.calculate_cost(input_tokens, output_tokens)
-        
+    def track_call(
+        self,
+        input_tokens: int,
+        output_tokens: int,
+        operation: str = "claude_call",
+        cache_read_tokens: int = 0,
+        cache_write_tokens: int = 0,
+    ):
+        """Track a Claude API call and log detailed cost information (cache-aware)."""
+        cost = self.calculate_cost(
+            input_tokens, output_tokens, cache_read_tokens, cache_write_tokens
+        )
+
+        # What the same tokens would have cost with NO caching:
+        # every cached (read+write) token billed at the full input rate, plus the
+        # normal non-cached input + output.
+        baseline_cost = (
+            (input_tokens + cache_read_tokens + cache_write_tokens) * self.INPUT_TOKEN_COST
+            + output_tokens * self.OUTPUT_TOKEN_COST
+        )
+        self.total_uncached_baseline_cost += baseline_cost
+        self.total_cache_read_tokens += cache_read_tokens
+        self.total_cache_write_tokens += cache_write_tokens
+
         # Update totals
         self.total_input_tokens += input_tokens
         self.total_output_tokens += output_tokens
@@ -69,23 +133,38 @@ class ClaudeCostTracker:
         
         # Log detailed cost information
         logger.info(f"=== CLAUDE COST TRACKING - {operation.upper()} ===")
-        logger.info(f"Input tokens: {input_tokens:,}")
+        logger.info(f"Input tokens (non-cached): {input_tokens:,}")
         logger.info(f"Output tokens: {output_tokens:,}")
+        if cache_read_tokens or cache_write_tokens:
+            logger.info(f"Cache READ tokens:  {cache_read_tokens:,} (billed @ {self.CACHE_READ_MULTIPLIER:.2f}x input)")
+            logger.info(f"Cache WRITE tokens: {cache_write_tokens:,} (billed @ {self.CACHE_WRITE_MULTIPLIER:.2f}x input)")
+            call_saving = baseline_cost - cost
+            logger.info(f"Cache saving this call: ${call_saving:.6f} (would-be ${baseline_cost:.6f} -> actual ${cost:.6f})")
         logger.info(f"Input cost: ${input_tokens * self.INPUT_TOKEN_COST:.6f}")
         logger.info(f"Output cost: ${output_tokens * self.OUTPUT_TOKEN_COST:.6f}")
         logger.info(f"Total cost for this call: ${cost:.6f}")
-        logger.info(f"Running totals - Calls: {self.call_count}, Input: {self.total_input_tokens:,}, Output: {self.total_output_tokens:,}, Total cost: ${self.total_cost:.6f}")
+        logger.info(f"Running totals - Calls: {self.call_count}, Input: {self.total_input_tokens:,}, Output: {self.total_output_tokens:,}, CacheRead: {self.total_cache_read_tokens:,}, CacheWrite: {self.total_cache_write_tokens:,}, Total cost: ${self.total_cost:.6f}")
         logger.info(f"=== END CLAUDE COST TRACKING ===")
         
         return cost
     
     def get_summary(self) -> Dict[str, Any]:
-        """Get cost tracking summary."""
+        """Get cost tracking summary (cache-aware)."""
+        total_cache_tokens = self.total_cache_read_tokens + self.total_cache_write_tokens
+        cache_hit_rate = (
+            self.total_cache_read_tokens / total_cache_tokens if total_cache_tokens > 0 else 0.0
+        )
+        realized_savings = self.total_uncached_baseline_cost - self.total_cost
         return {
             "total_calls": self.call_count,
             "total_input_tokens": self.total_input_tokens,
             "total_output_tokens": self.total_output_tokens,
+            "total_cache_read_tokens": self.total_cache_read_tokens,
+            "total_cache_write_tokens": self.total_cache_write_tokens,
+            "cache_hit_rate": cache_hit_rate,
             "total_cost": self.total_cost,
+            "uncached_baseline_cost": self.total_uncached_baseline_cost,
+            "realized_cache_savings": realized_savings,
             "average_cost_per_call": self.total_cost / self.call_count if self.call_count > 0 else 0
         }
     
@@ -96,9 +175,14 @@ class ClaudeCostTracker:
         
         logger.info(f"=== FINAL CLAUDE COST SUMMARY{job_info} ===")
         logger.info(f"Total Claude API calls: {summary['total_calls']}")
-        logger.info(f"Total input tokens: {summary['total_input_tokens']:,}")
+        logger.info(f"Total input tokens (non-cached): {summary['total_input_tokens']:,}")
         logger.info(f"Total output tokens: {summary['total_output_tokens']:,}")
+        logger.info(f"Total cache READ tokens: {summary['total_cache_read_tokens']:,}")
+        logger.info(f"Total cache WRITE tokens: {summary['total_cache_write_tokens']:,}")
+        logger.info(f"Cache hit rate (read / (read+write)): {summary['cache_hit_rate']*100:.1f}%")
         logger.info(f"Total Claude cost: ${summary['total_cost']:.6f}")
+        logger.info(f"Baseline cost without caching: ${summary['uncached_baseline_cost']:.6f}")
+        logger.info(f"Realized savings from prompt caching: ${summary['realized_cache_savings']:.6f}")
         logger.info(f"Average cost per call: ${summary['average_cost_per_call']:.6f}")
         logger.info(f"=== END FINAL CLAUDE COST SUMMARY ===")
         
@@ -119,6 +203,66 @@ def _format_json_for_log(obj: Any) -> str:
 # ---------- LOAD ENV VARIABLES ----------
 BEDROCK_MODEL_ID = os.environ.get('BEDROCK_MODEL_ID', '')
 HAIKU_BEDROCK_MODEL_ID = os.environ.get('HAIKU_BEDROCK_MODEL_ID', BEDROCK_MODEL_ID)
+
+# ---------- PROMPT CACHING CONFIG ----------
+# Explicit prompt caching for the main extraction call. Supported on Anthropic Claude
+# models that expose explicit caching on Bedrock (e.g. Claude Sonnet 4.5
+# `anthropic.claude-sonnet-4-5-20250929-v1:0`, min 1,024 tokens/checkpoint, up to 4
+# checkpoints, TTL 5m or 1h). We cache the static per-carrier instruction block
+# (system) and the static tool schema (tools); only the dynamic invoice text stays
+# uncached (messages).
+#   - Set PROMPT_CACHING_ENABLED=false to fully disable (falls back to the old
+#     single-block request) — useful if the configured model doesn't support caching.
+#   - PROMPT_CACHE_TTL accepts "5m" or "1h" (default 1h: templates are static and
+#     invoices for a carrier may arrive more than 5 minutes apart).
+PROMPT_CACHING_ENABLED = os.environ.get('PROMPT_CACHING_ENABLED', 'true').strip().lower() in ('1', 'true', 'yes', 'on')
+PROMPT_CACHE_TTL = os.environ.get('PROMPT_CACHE_TTL', '1h').strip().lower()
+if PROMPT_CACHE_TTL not in ('5m', '1h'):
+    PROMPT_CACHE_TTL = '1h'
+# Sentinel that separates the STATIC cacheable prefix from the DYNAMIC invoice text
+# inside a fully-built prompt string. Chosen to never collide with invoice content.
+CACHE_SPLIT_MARKER = "\n<<<PANDO_DYNAMIC_INVOICE_CONTENT>>>\n"
+
+
+def _cache_point_supports_ttl() -> bool:
+    """Return True only if the installed botocore's Bedrock Runtime `CachePointBlock`
+    accepts a `ttl` field. Older botocore (e.g. 1.42.x bundled here) only allows
+    `type`, and sending `ttl` triggers a client-side ParamValidationError. Detecting
+    this lets us use the 1-hour TTL when the SDK is new enough and silently fall back
+    to the default 5-minute TTL otherwise. Result is memoized after first call.
+    """
+    global _CACHE_POINT_TTL_SUPPORTED
+    if _CACHE_POINT_TTL_SUPPORTED is not None:
+        return _CACHE_POINT_TTL_SUPPORTED
+    supported = False
+    try:
+        import botocore.session
+        model = botocore.session.get_session().get_service_model('bedrock-runtime')
+        shape = model.shape_for('CachePointBlock')
+        supported = 'ttl' in getattr(shape, 'members', {})
+    except Exception:
+        # If anything goes wrong probing the model, be conservative: omit ttl.
+        supported = False
+    _CACHE_POINT_TTL_SUPPORTED = supported
+    logger.info(f"Prompt-cache: cachePoint 'ttl' field supported by SDK = {supported} "
+                f"(TTL will be {'honored' if supported else 'default 5m; ttl omitted'})")
+    return supported
+
+
+_CACHE_POINT_TTL_SUPPORTED = None  # memoized lazily on first use
+
+
+def _build_cache_point(ttl: str) -> dict:
+    """Build a Converse `cachePoint` block that is safe for the installed botocore.
+
+    Always includes `type`; includes `ttl` only when the SDK model supports it.
+    """
+    cp = {"type": "default"}
+    if ttl in ("5m", "1h") and _cache_point_supports_ttl():
+        cp["ttl"] = ttl
+    return {"cachePoint": cp}
+
+
 REGION = os.environ.get('REGION', 'us-east-1')
 FROM_EMAIL = os.environ.get('FROM_EMAIL', '')
 API_ENDPOINT = ''
@@ -140,92 +284,6 @@ SMTP_SERVER = os.environ.get('SMTP_SERVER', '')
 SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
 SMTP_SECRET_NAME = os.environ.get('SMTP_SECRET_NAME', '')
 APP_SECRET_NAME = os.environ.get('APP_SECRET_NAME', '')
-
-# ── Pando Testing Agent integration ──────────────────────────────────────────
-# Set these in the Lambda console after deploying the testing agent.
-# TESTING_AGENT_URL  = API Gateway URL from SAM Outputs (e.g. https://xxx.execute-api.us-east-1.amazonaws.com)
-# TESTING_AGENT_KEY  = same value as INTAKE_API_KEY in the testing agent backend
-# TESTING_PROJECT_ID = project_id of the matching project in the testing agent (e.g. "ge-freight")
-# Accept both TESTING_AGENT_KEY (current Lambda console name) and the older
-# TESTING_AGENT_API_KEY name for backward compatibility.
-TESTING_AGENT_URL     = os.environ.get('TESTING_AGENT_URL', '')
-TESTING_AGENT_API_KEY = os.environ.get('TESTING_AGENT_KEY', '') or os.environ.get('TESTING_AGENT_API_KEY', '')
-TESTING_PROJECT_ID    = os.environ.get('TESTING_PROJECT_ID', '')
-
-
-def _post_to_testing_agent(
-    final_payload: dict,
-    api_response_data: dict,
-    original_input_bucket: str,
-    original_input_key: str,
-    llm_response: dict = None,
-    prompt_text: str = "",
-) -> None:
-    """
-    Fire-and-forget: push invoice data to the Pando Testing Agent for independent validation.
-    Called immediately after the Pando API call so the testing agent can score the result.
-    Never raises — invoice processing must never be blocked by this call.
-    Timeout is 5 seconds to avoid adding latency to Lambda execution.
-    """
-    if not TESTING_AGENT_URL or not TESTING_AGENT_API_KEY:
-        logger.info(
-            "[TestingAgent] Skipped — TESTING_AGENT_URL or TESTING_AGENT_KEY "
-            "env var is not set on this Lambda."
-        )
-        return
-
-    try:
-        payload_data = {}
-        if final_payload and "data" in final_payload and final_payload["data"]:
-            payload_data = final_payload["data"][0]
-
-        # Ensure the PDF S3 location is inside payload.custom so the
-        # testing agent can download and independently validate it
-        custom = dict(payload_data.get("custom") or {})
-        if not custom.get("attachment_bucket") and original_input_bucket:
-            custom["attachment_bucket"] = original_input_bucket
-            custom["attachment_key"]    = original_input_key
-            payload_data = {**payload_data, "custom": custom}
-
-        body = {
-            "invoice_number":         str(payload_data.get("invoice_number") or "unknown"),
-            "payload":                payload_data,
-            "llm_response":           llm_response or {},
-            "prompt":                 prompt_text or "",
-            "api_status":             api_response_data.get("status_code"),
-            "execution_duration_ms":  0,
-            "cold_start":             False,
-            "errors":                 [],
-            "warnings":               [],
-        }
-        # project_id tells the testing agent which project config to validate
-        # against — without it, intake cannot be routed to a project.
-        if TESTING_PROJECT_ID:
-            body["project_id"] = TESTING_PROJECT_ID
-
-        if not TESTING_PROJECT_ID:
-            logger.warning(
-                "[TestingAgent] TESTING_PROJECT_ID is not set — intake may fail "
-                "to route unless s3_bucket/log_group matching succeeds instead."
-            )
-
-        resp = requests.post(
-            f"{TESTING_AGENT_URL}/api/intake",
-            headers={
-                "Content-Type": "application/json",
-                "X-Intake-Key": TESTING_AGENT_API_KEY,
-            },
-            json=body,
-            timeout=5,
-        )
-        logger.info(
-            f"[TestingAgent] Pushed invoice {body['invoice_number']} → "
-            f"status {resp.status_code} | response={resp.text[:300]}"
-        )
-
-    except Exception as e:
-        logger.warning(f"[TestingAgent] Push failed (non-critical): {e}")
-
 
 # ---------------------------------------------------------------------------
 # Canonical Location Mapping — Unified structure combining exact-name matches,
@@ -318,7 +376,7 @@ CANONICAL_LOCATION_MAPPING = {
     },
     "DPF": {
         "name_equals": [],
-        "name_contains": ["DPO", "DPF"],
+        "name_contains": ["DPO", "DPF", "CORPORATE WAREHOUSE"],
         "name_and_groups": [["GE", "DECATUR"]],
         "address_city_patterns": [{"address_contains": "2328 Point Mallard", "city_equals": "Decatur"}]
     },
@@ -998,7 +1056,8 @@ def _sync_address_fields(shipment: dict, section_kvs: dict, field_prefix: str):
 # ---------- GLOBAL PROMPT CACHE ----------
 _PROMPT_TEMPLATE_CACHE = {}
 _PROMPT_TEMPLATE_CACHE_TIMESTAMP = {}
-_PROMPT_TEMPLATE_CACHE_TTL = 300  # in seconds, e.g., 5 minutes
+_PROMPT_TEMPLATE_CACHE_ETAG = {}  # cache_key -> last-seen S3 ETag (content fingerprint)
+_PROMPT_TEMPLATE_CACHE_TTL = 300  # in seconds; TTL fallback when ETag check is unavailable
 MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = [1, 2, 4]
 
@@ -1473,35 +1532,80 @@ except Exception as e:
 
 # ---------- PROMPT TEMPLATE HANDLING ----------
 def load_prompt_template_from_s3(bucket_name, key, force_refresh=False):
-    """Load a prompt template from an S3 bucket with time-based cache invalidation."""
+    """Load a prompt template from S3 with ETag-based cache invalidation.
+
+    The templates are cached in-process (per warm Lambda container) to avoid
+    re-downloading and re-exec'ing the (large) template file on every invocation.
+
+    Freshness strategy:
+      1. Primary — ETag check: a cheap head_object reads the current S3 ETag (a
+         content fingerprint). If the cached ETag matches, the file is unchanged and
+         we serve the cache. If it differs (someone re-uploaded the template, even with
+         the SAME key/filename), we re-download immediately. This makes prompt updates
+         take effect on the very next invocation, deterministically, on ANY container —
+         fixing the "old prompt still served for up to 5 minutes" problem.
+      2. Fallback — TTL: if the head_object call fails for any reason, we fall back to
+         the previous 5-minute time-based invalidation so processing never breaks.
+      force_refresh=True bypasses the cache entirely.
+    """
     cache_key = f"{bucket_name}/{key}"
     current_time = datetime.now().timestamp()
-    
-    # Check if we need to refresh the cache
-    cache_expired = False
-    if cache_key in _PROMPT_TEMPLATE_CACHE_TIMESTAMP:
+
+    have_cache = cache_key in _PROMPT_TEMPLATE_CACHE
+
+    # ---- Primary freshness signal: current S3 ETag via a cheap head_object ----
+    current_etag = None
+    etag_check_ok = False
+    try:
+        head = s3.head_object(Bucket=bucket_name, Key=key)
+        current_etag = head.get('ETag')
+        etag_check_ok = current_etag is not None
+    except Exception as e:
+        # Could be permissions, transient error, etc. Fall back to TTL below.
+        logger.warning(f"Prompt template head_object failed ({e}); falling back to TTL cache check")
+
+    if not force_refresh and have_cache and etag_check_ok:
+        cached_etag = _PROMPT_TEMPLATE_CACHE_ETAG.get(cache_key)
+        if cached_etag == current_etag:
+            logger.info("Using cached prompt templates (ETag unchanged)")
+            return _PROMPT_TEMPLATE_CACHE[cache_key]
+        else:
+            logger.info(
+                f"Prompt template ETag changed (cached={cached_etag}, current={current_etag}); "
+                f"reloading from S3"
+            )
+
+    # ---- Fallback: TTL-based check when ETag was not usable ----
+    if not force_refresh and have_cache and not etag_check_ok:
         last_update_time = _PROMPT_TEMPLATE_CACHE_TIMESTAMP.get(cache_key, 0)
         cache_expired = (current_time - last_update_time) > _PROMPT_TEMPLATE_CACHE_TTL
-    
-    # Use cache only if it exists, isn't expired, and we're not forcing a refresh
-    if not force_refresh and cache_key in _PROMPT_TEMPLATE_CACHE and not cache_expired:
-        logger.info("Using cached prompt templates")
-        return _PROMPT_TEMPLATE_CACHE[cache_key]
-    # -------- ACTUAL LOAD from S3 if not cached --------
+        if not cache_expired:
+            logger.info("Using cached prompt templates (TTL fallback, not expired)")
+            return _PROMPT_TEMPLATE_CACHE[cache_key]
+
+    # -------- ACTUAL LOAD from S3 --------
     try:
         obj = s3.get_object(Bucket=bucket_name, Key=key)
         content = obj['Body'].read().decode('utf-8')
         local_vars = {}
         exec(content, {}, local_vars)
         templates = local_vars.get("PROMPT_TEMPLATES", {})
-        
-        # Save to cache
+
+        # Save to cache along with the ETag we loaded (prefer the get_object ETag, which
+        # corresponds exactly to the content we just read).
+        loaded_etag = obj.get('ETag', current_etag)
         _PROMPT_TEMPLATE_CACHE[cache_key] = templates
         _PROMPT_TEMPLATE_CACHE_TIMESTAMP[cache_key] = current_time
-        logger.info("Loaded and cached prompt templates from S3")
+        _PROMPT_TEMPLATE_CACHE_ETAG[cache_key] = loaded_etag
+        logger.info(f"Loaded and cached prompt templates from S3 (ETag={loaded_etag})")
         return templates
     except Exception as e:
         logger.error(f"Error loading prompt template from S3: {e}")
+        # If a fresh load fails but we still have a cached copy, serve it rather than
+        # returning nothing (avoids dropping to the generic prompt on a transient error).
+        if have_cache:
+            logger.warning("Serving previously cached prompt templates after load failure")
+            return _PROMPT_TEMPLATE_CACHE[cache_key]
         return {}
 
 def get_prompt_template(carrier_name: str) -> Optional[str]:
@@ -2695,11 +2799,10 @@ def extract_carrier_source_destination(
         logger.info(f"Image format: {'JPEG' if len(img_bytes) > 10 * 1024 * 1024 else 'PNG'}")
         logger.info(f"Searching for START header keywords: {START_HEADER_KEYWORDS}")
         logger.info(f"Searching for END header keywords: {END_HEADER_KEYWORDS}")
-        logger.info(f"Calling Textract analyze_document with FeatureTypes: ['FORMS', 'TABLES']")
+        logger.info(f"Calling Textract detect_document_text for header position detection (LINE blocks only — no FORMS/TABLES needed)")
         
-        response = textract.analyze_document(
-            Document={'Bytes': img_bytes},
-            FeatureTypes=['FORMS', 'TABLES']
+        response = textract.detect_document_text(
+            Document={'Bytes': img_bytes}
         )
         blocks = response.get('Blocks', [])
         logger.info(f"Textract found {len(blocks)} blocks")
@@ -2888,11 +2991,10 @@ def extract_carrier_bill_to_address(
         logger.info(f"Image format: {'JPEG' if len(img_bytes) > 10 * 1024 * 1024 else 'PNG'}")
         logger.info(f"Searching for START header keywords: {START_HEADER_KEYWORDS}")
         logger.info(f"Searching for END header keywords: {END_HEADER_KEYWORDS}")
-        logger.info(f"Calling Textract analyze_document with FeatureTypes: ['FORMS', 'TABLES']")
+        logger.info(f"Calling Textract detect_document_text for header position detection (LINE blocks only — no FORMS/TABLES needed)")
         
-        response = textract.analyze_document(
-            Document={'Bytes': img_bytes},
-            FeatureTypes=['FORMS', 'TABLES']
+        response = textract.detect_document_text(
+            Document={'Bytes': img_bytes}
         )
         blocks = response.get('Blocks', [])
         logger.info(f"Textract found {len(blocks)} blocks")
@@ -3643,61 +3745,125 @@ def extract_information_with_claude(
     ]
 
     def call_claude(prompt: str, model_id: str) -> dict:
-        """Call Claude and return structured output or raise error."""
+        """Call Claude and return structured output or raise error.
+
+        The `prompt` is expected to contain a CACHE_SPLIT_MARKER separating the STATIC
+        cacheable prefix (per-carrier instructions) from the DYNAMIC invoice text. When
+        prompt caching is enabled we send:
+            tools    = [ validate_invoice_data toolSpec, cachePoint ]   # static, global
+            system   = [ static instructions + formatting rules, cachePoint ]  # static/carrier
+            messages = [ user -> dynamic invoice text ]                 # NOT cached
+        Cache checkpoints are chained tools -> system -> messages, so all static content
+        sits before the variable content, maximizing the cache-hit prefix.
+        """
         logger.info("Calling Claude model...")
-        enhanced_prompt = f"""
-                    {prompt}
 
-                    IMPORTANT FORMATTING INSTRUCTIONS:
-                    1. Use the validate_invoice_data tool to structure your response.
-                    2. For the "shipments" field, always provide a properly formatted JSON array, even if there's only one shipment.
-                    3. For the "charges" field within each shipment, always provide a properly formatted JSON array.
-                    4. Ensure all JSON is valid - no trailing commas, properly closed brackets, and proper nesting.
-                    5. For numeric fields like "total_invoice_value" and "charge_gross_amount", provide numeric values without quotes.
-                    6. For string fields, provide properly quoted string values.
-                    7. Always include "confidence" and "explanation" fields for each value.
-                    8. Never include <parameter> tags or other XML-like markup in your JSON.
-                    9. Ensure all required fields are present in your response.
+        # Static formatting rules — identical for every call, so they belong in the
+        # cached prefix (system), NOT interleaved with the dynamic invoice text.
+        formatting_instructions = """IMPORTANT FORMATTING INSTRUCTIONS:
+1. Use the validate_invoice_data tool to structure your response.
+2. For the "shipments" field, always provide a properly formatted JSON array, even if there's only one shipment.
+3. For the "charges" field within each shipment, always provide a properly formatted JSON array.
+4. Ensure all JSON is valid - no trailing commas, properly closed brackets, and proper nesting.
+5. For numeric fields like "total_invoice_value" and "charge_gross_amount", provide numeric values without quotes.
+6. For string fields, provide properly quoted string values.
+7. Always include "confidence" and "explanation" fields for each value.
+8. Never include <parameter> tags or other XML-like markup in your JSON.
+9. Ensure all required fields are present in your response.
 
-                    Remember, your response must be valid JSON that strictly follows the schema provided by the tool.
-                    """
+Remember, your response must be valid JSON that strictly follows the schema provided by the tool."""
+
+        # Split the prompt into static prefix + dynamic tail on the marker.
+        if CACHE_SPLIT_MARKER in prompt:
+            static_prefix, dynamic_tail = prompt.split(CACHE_SPLIT_MARKER, 1)
+        else:
+            # No marker (unexpected) -> treat entire prompt as dynamic to stay correct.
+            static_prefix, dynamic_tail = "", prompt
+
+        tool_spec = {
+            "toolSpec": {
+                "name": "validate_invoice_data",
+                "description": "Extract and validate invoice fields.",
+                "inputSchema": {"json": TOOL_SCHEMA},
+            }
+        }
+
+        use_caching = PROMPT_CACHING_ENABLED and bool(static_prefix.strip())
+
         try:
-            response = bedrock.converse(
-                modelId=model_id,
-                messages=[{
-                    "role": "user",
-                    "content": [{"text": enhanced_prompt}]
-                }],
-                toolConfig={
-                    "tools": [{
-                        "toolSpec": {
-                            "name": "validate_invoice_data",
-                            "description": "Extract and validate invoice fields.",
-                            "inputSchema": {"json": TOOL_SCHEMA}
-                        }
-                    }],
-                },
-                additionalModelRequestFields={
-                    "reasoning_config": {
-                        "type": "enabled",
-                        "budget_tokens": 3000
+            if use_caching:
+                cache_point = _build_cache_point(PROMPT_CACHE_TTL)
+                # system: static per-carrier instructions + static formatting rules,
+                # followed by a cache checkpoint (everything above is cached).
+                system_blocks = [
+                    {"text": static_prefix},
+                    {"text": formatting_instructions},
+                    cache_point,
+                ]
+                # tools: static schema + cache checkpoint (cached globally).
+                tool_config = {"tools": [tool_spec, cache_point]}
+                # messages: ONLY the dynamic invoice text (+ any retry hints) -> not cached.
+                messages = [{"role": "user", "content": [{"text": dynamic_tail}]}]
+                response = bedrock.converse(
+                    modelId=model_id,
+                    system=system_blocks,
+                    messages=messages,
+                    toolConfig=tool_config,
+                    additionalModelRequestFields={
+                        "reasoning_config": {
+                            "type": "enabled",
+                            "budget_tokens": 3000,
+                        },
+                        "max_tokens": 100000,
                     },
-                    "max_tokens": 100000, 
-                }
-            )
+                )
+            else:
+                # Caching disabled / no static prefix: preserve original single-block behavior.
+                enhanced_prompt = f"{static_prefix}\n\n{formatting_instructions}\n\n{dynamic_tail}" if static_prefix else dynamic_tail
+                response = bedrock.converse(
+                    modelId=model_id,
+                    messages=[{"role": "user", "content": [{"text": enhanced_prompt}]}],
+                    toolConfig={"tools": [tool_spec]},
+                    additionalModelRequestFields={
+                        "reasoning_config": {
+                            "type": "enabled",
+                            "budget_tokens": 3000,
+                        },
+                        "max_tokens": 100000,
+                    },
+                )
             logger.info(f"Claude response received:\n{_format_json_for_log(response)}")
 
-            # Enhanced Cost Tracking
+            # Enhanced Cost Tracking (cache-aware)
             try:
                 usage = response.get('usage', {})
                 input_tokens = usage.get('inputTokens', 0)
                 output_tokens = usage.get('outputTokens', 0)
+                cache_read_tokens = usage.get('cacheReadInputTokens', 0) or 0
+                cache_write_tokens = usage.get('cacheWriteInputTokens', 0) or 0
+
+                # Verify the TTL that Bedrock ACTUALLY applied to cache-written tokens.
+                # `cacheDetails` reports the ttl bucket ("5m"/"1h") per cached token group.
+                # This is the definitive proof of whether 1h caching engaged (vs the config
+                # merely being requested).
+                cache_details = usage.get('cacheDetails')
+                if cache_details is not None:
+                    logger.info(f"CACHE_TTL_VERIFY | requested PROMPT_CACHE_TTL={PROMPT_CACHE_TTL} | "
+                                f"ttl_supported_by_sdk={_cache_point_supports_ttl()} | "
+                                f"cacheDetails={_format_json_for_log(cache_details)}")
+                else:
+                    logger.info(f"CACHE_TTL_VERIFY | requested PROMPT_CACHE_TTL={PROMPT_CACHE_TTL} | "
+                                f"ttl_supported_by_sdk={_cache_point_supports_ttl()} | "
+                                f"cacheDetails not present in usage (SDK/model may not report it): "
+                                f"read={cache_read_tokens} write={cache_write_tokens}")
                 
                 # Use centralized cost tracker
                 cost_tracker.track_call(
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
-                    operation="claude_extraction"
+                    operation="claude_extraction",
+                    cache_read_tokens=cache_read_tokens,
+                    cache_write_tokens=cache_write_tokens,
                 )
                 
             except Exception as e:
@@ -3749,10 +3915,28 @@ def extract_information_with_claude(
             logger.info(f"Attempting to use carrier-specific prompt for: {carrier_name}")
             prompt_template = get_prompt_template(carrier_name)
             if prompt_template:
-                # Format the carrier-specific prompt with the document text
+                # Format the carrier-specific prompt with the document text.
+                #
+                # For prompt caching we must keep the STATIC instructions (identical for
+                # every invoice of this carrier) ahead of the DYNAMIC invoice text so the
+                # static part can form a byte-identical cacheable prefix. The templates
+                # place the `{pdf_text}` slot near the TOP, so we split the raw template on
+                # that slot and move the invoice text to the very end, marked by
+                # CACHE_SPLIT_MARKER. Everything before the marker is cacheable.
                 try:
-                    prompt = prompt_template.format(pdf_text=text)
-                    logger.info(f"Using carrier-specific prompt for {carrier_name}")
+                    if "{pdf_text}" in prompt_template:
+                        # Replace the (possibly multiple) dynamic slots in the static body
+                        # with a stable reference phrase so the prefix stays identical, and
+                        # append the real invoice text once, after the marker.
+                        static_body = prompt_template.replace(
+                            "{pdf_text}", "the invoice text provided at the end of this message"
+                        )
+                        prompt = f"{static_body}{CACHE_SPLIT_MARKER}=== INVOICE TEXT ===\n{text}"
+                    else:
+                        # Template has no explicit slot; treat the whole template as static
+                        # prefix and append the invoice text as the dynamic tail.
+                        prompt = f"{prompt_template}{CACHE_SPLIT_MARKER}=== INVOICE TEXT ===\n{text}"
+                    logger.info(f"Using carrier-specific prompt for {carrier_name} (cache-structured)")
                 except Exception as e:
                     logger.warning(f"Error formatting carrier-specific prompt: {str(e)}, falling back to generic prompt")
                     prompt = None
@@ -3760,7 +3944,7 @@ def extract_information_with_claude(
         # Fallback to generic prompt if carrier-specific prompt is not available
         if not prompt:
             logger.info("Using generic extraction prompt")
-            prompt = f"""Extract structured information from the following invoice document text.
+            static_generic = """Extract structured information from the following invoice document text.
 
 Please extract all relevant invoice fields including:
 - Invoice number, invoice date, payment due date
@@ -3771,18 +3955,18 @@ Please extract all relevant invoice fields including:
 - Total invoice value and payment terms
 - Any other relevant invoice information
 
-Document text:
-{text}
-
 Use the validate_invoice_data tool to structure your response with proper JSON format."""
+            prompt = f"{static_generic}{CACHE_SPLIT_MARKER}Document text:\n{text}"
         
         if charge_correction_hint:
+            # Retry hints are per-call dynamic context -> keep them AFTER the split marker
+            # so they never invalidate the cached static prefix.
             prompt = prompt + charge_correction_hint
-            logger.info("CHARGE_CORRECTION | correction hint appended to prompt")
+            logger.info("CHARGE_CORRECTION | correction hint appended to prompt (dynamic tail)")
 
         if date_retry_note:
             prompt = prompt + date_retry_note
-            logger.info("INVOICE_DATE_VALIDATION | date retry note appended to prompt")
+            logger.info("INVOICE_DATE_VALIDATION | date retry note appended to prompt (dynamic tail)")
 
         logger.info(f"Prompt preview (first 200 chars): {prompt[:200]}")
 
@@ -5739,7 +5923,9 @@ class APIHandler:
                     invoice_destination_name = str(field).strip() if field else ""
         
         extracted_info["custom"] = {
-            "source_type": existing_custom.get("source_type") if existing_custom.get("source_type") else "email",
+            # Always force "email" here regardless of what the LLM extracted (empty or any other value) —
+            # source_type is not a real invoice field, so any LLM-provided value must be overridden.
+            "source_type": "email",
             "shipper_email": existing_custom.get("shipper_email") if existing_custom.get("shipper_email") else FROM_EMAIL,
             "sender_email": existing_custom.get("sender_email") if existing_custom.get("sender_email") else email_details.get('to', ''),
             "vendor_name": vendor_name,  # Always use mapped vendor_name from vendor_reference_id, ignore LLM-extracted value
@@ -5877,24 +6063,32 @@ class APIHandler:
                                 _cn_val = str(_cn).strip() if _cn else ""
                             if _cn_val and _bol_val:
                                 if vendor_ref_upper == "MXNG":
-                                    # VAN or REEFER keyword present (LLM set TL-STANDARD) → BOL only
-                                    # VAN matches: DRYVAN, DRY VAN, CARGO VAN, or any text containing "VAN"
-                                    # REEFER matches: REEFER, 6Y REEFER, or any text containing "REEFER"
-                                    # Neither present → BOL-container_number
-                                    _llm_sl = str(shipment.get("service_level", "")).strip()
-                                    if _llm_sl == "TL-STANDARD":
-                                        if isinstance(shipment.get("shipment_number"), dict):
-                                            shipment["shipment_number"]["value"] = _bol_val
-                                        else:
-                                            shipment["shipment_number"] = _bol_val
-                                        logger.info(f"Set shipment_number to BOL only for MXNG (VAN or REEFER keyword present): '{_bol_val}'")
+                                    # Skip override if LLM already resolved a "30xx..." GE shipment number
+                                    _existing_sn = shipment.get("shipment_number", "")
+                                    if isinstance(_existing_sn, dict):
+                                        _existing_sn = _existing_sn.get("value", "")
+                                    _existing_sn = str(_existing_sn).strip()
+                                    if _existing_sn and _existing_sn[:2] == "30":
+                                        logger.info(f"MXNG: shipment_number '{_existing_sn}' starts with '30' — skipping BOL/BOL-container override, keeping LLM value")
                                     else:
-                                        _combined = f"{_bol_val}-{_cn_val}"
-                                        if isinstance(shipment.get("shipment_number"), dict):
-                                            shipment["shipment_number"]["value"] = _combined
+                                        # VAN or REEFER keyword present (LLM set TL-STANDARD) → BOL only
+                                        # VAN matches: DRYVAN, DRY VAN, CARGO VAN, or any text containing "VAN"
+                                        # REEFER matches: REEFER, 6Y REEFER, or any text containing "REEFER"
+                                        # Neither present → BOL-container_number
+                                        _llm_sl = str(shipment.get("service_level", "")).strip()
+                                        if _llm_sl == "TL-STANDARD":
+                                            if isinstance(shipment.get("shipment_number"), dict):
+                                                shipment["shipment_number"]["value"] = _bol_val
+                                            else:
+                                                shipment["shipment_number"] = _bol_val
+                                            logger.info(f"Set shipment_number to BOL only for MXNG (VAN or REEFER keyword present): '{_bol_val}'")
                                         else:
-                                            shipment["shipment_number"] = _combined
-                                        logger.info(f"Set shipment_number to 'BOL-container_number' for MXNG (no VAN/REEFER keywords): '{_combined}'")
+                                            _combined = f"{_bol_val}-{_cn_val}"
+                                            if isinstance(shipment.get("shipment_number"), dict):
+                                                shipment["shipment_number"]["value"] = _combined
+                                            else:
+                                                shipment["shipment_number"] = _combined
+                                            logger.info(f"Set shipment_number to 'BOL-container_number' for MXNG (no VAN/REEFER keywords): '{_combined}'")
                                 else:
                                     _combined = f"{_bol_val}-{_cn_val}"
                                     if isinstance(shipment.get("shipment_number"), dict):
@@ -8964,8 +9158,12 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     if isinstance(original_custom, dict):
                         clean_custom = {}
                         for field in allowed_custom_fields:
+                            # Always force source_type to "email" regardless of what value (or lack thereof)
+                            # the LLM/extracted_info produced — never send an LLM-hallucinated value to the API.
+                            if field == "source_type":
+                                clean_custom[field] = "email"
                             # Preserve existing value if present (even if empty string)
-                            if field in original_custom:
+                            elif field in original_custom:
                                 # Always set client_id to 36, ignore any extracted value
                                 if field == "client_id":
                                     clean_custom[field] = 36
@@ -8973,9 +9171,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                                     clean_custom[field] = original_custom[field]
                             else:
                                 # Only set default if field is truly missing
-                                if field == "source_type":
-                                    clean_custom[field] = "email"
-                                elif field == "client_id":
+                                if field == "client_id":
                                     clean_custom[field] = 36
                                 elif field == "pay_as_present":
                                     clean_custom[field] = False
@@ -9315,16 +9511,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 }
                 
                 logger.info(f"API response status code: {response.status_code if response else 'No response'}")
-
-                # ── TESTING AGENT: push payload for independent AI validation ──
-                _post_to_testing_agent(
-                    final_payload=final_payload,
-                    api_response_data=api_response_data,
-                    original_input_bucket=original_input_bucket,
-                    original_input_key=original_input_key,
-                )
-                # ──────────────────────────────────────────────────────────────
-
+                
                 # Check if API call was successful (status code 200)
                 if response and response.status_code == 200:
                     api_success = True

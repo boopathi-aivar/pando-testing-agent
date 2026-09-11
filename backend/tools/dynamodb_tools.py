@@ -135,6 +135,15 @@ def get_result_by_id(result_id: str) -> dict:
     return _from_dynamo(item) if item else {}
 
 
+def delete_result(result_id: str) -> bool:
+    """Delete a test result by result_id. Returns True if an item was removed."""
+    resp = tbl_results().delete_item(
+        Key={"result_id": result_id},
+        ReturnValues="ALL_OLD",
+    )
+    return bool(resp.get("Attributes"))
+
+
 def save_job(job: dict) -> str:
     """Upsert a job document into DynamoDB. Returns job_id. Sets 1-hour TTL."""
     item = dict(job)

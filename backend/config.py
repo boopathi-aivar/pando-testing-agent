@@ -28,6 +28,10 @@ class Settings:
     # Region the source account's S3 bucket / CloudWatch log group live in.
     # Falls back to AWS_REGION if not set.
     SOURCE_ACCOUNT_REGION: str = os.getenv("SOURCE_ACCOUNT_REGION", "") or AWS_REGION
+    # Optional local override: Pando IAM keys in .env (skips Secrets Manager).
+    SOURCE_AWS_ACCESS_KEY_ID: str     = os.getenv("SOURCE_AWS_ACCESS_KEY_ID", "")
+    SOURCE_AWS_SECRET_ACCESS_KEY: str = os.getenv("SOURCE_AWS_SECRET_ACCESS_KEY", "")
+    SOURCE_AWS_SESSION_TOKEN: str    = os.getenv("SOURCE_AWS_SESSION_TOKEN", "")
 
 
 settings = Settings()
@@ -57,6 +61,7 @@ def make_aws_session() -> boto3.Session:
     return boto3.Session(
         aws_access_key_id     = settings.AWS_ACCESS_KEY_ID     or None,
         aws_secret_access_key = settings.AWS_SECRET_ACCESS_KEY or None,
+        aws_session_token     = os.getenv("AWS_SESSION_TOKEN") or None,
         region_name           = settings.AWS_REGION,
     )
 
@@ -76,7 +81,30 @@ def _fetch_source_credentials() -> dict:
     return {
         "access_key_id":     secret["AWS_ACCESS_KEY_ID"],
         "secret_access_key": secret["AWS_SECRET_ACCESS_KEY"],
+        "session_token":     secret.get("AWS_SESSION_TOKEN") or secret.get("SESSION_TOKEN") or "",
     }
+
+
+def _source_creds_from_env() -> dict | None:
+    """Pando IAM keys pasted into .env for local testing."""
+    key = (settings.SOURCE_AWS_ACCESS_KEY_ID or "").strip()
+    secret = (settings.SOURCE_AWS_SECRET_ACCESS_KEY or "").strip()
+    if not key or not secret:
+        return None
+    return {
+        "access_key_id":     key,
+        "secret_access_key": secret,
+        "session_token":     (settings.SOURCE_AWS_SESSION_TOKEN or "").strip(),
+    }
+
+
+def _session_from_source_creds(creds: dict) -> boto3.Session:
+    return boto3.Session(
+        aws_access_key_id     = creds["access_key_id"],
+        aws_secret_access_key = creds["secret_access_key"],
+        aws_session_token     = creds.get("session_token") or None,
+        region_name           = settings.SOURCE_ACCOUNT_REGION,
+    )
 
 
 def make_source_aws_session() -> boto3.Session:
@@ -84,10 +112,16 @@ def make_source_aws_session() -> boto3.Session:
     Return a boto3 Session for the OTHER AWS account where the invoice
     processor's S3 bucket and CloudWatch log group actually live.
 
-    If SOURCE_ACCOUNT_SECRET_NAME is not configured, falls back to this
-    account's own session — i.e. behaves exactly as before for setups where
-    everything is in one account.
+    Resolution order (local and Lambda):
+      1. SOURCE_AWS_ACCESS_KEY_ID + SOURCE_AWS_SECRET_ACCESS_KEY in env
+      2. SOURCE_ACCOUNT_SECRET_NAME → Secrets Manager in this account
+      3. This account's own session (SSO) — S3 will fail if that role
+         cannot read the Pando buckets
     """
+    env_creds = _source_creds_from_env()
+    if env_creds:
+        return _session_from_source_creds(env_creds)
+
     if not settings.SOURCE_ACCOUNT_SECRET_NAME:
         return make_aws_session()
 
@@ -99,11 +133,125 @@ def make_source_aws_session() -> boto3.Session:
         return _source_session_cache["session"]
 
     creds = _fetch_source_credentials()
-    session = boto3.Session(
-        aws_access_key_id     = creds["access_key_id"],
-        aws_secret_access_key = creds["secret_access_key"],
-        region_name           = settings.SOURCE_ACCOUNT_REGION,
-    )
+    session = _session_from_source_creds(creds)
     _source_session_cache["session"]    = session
     _source_session_cache["fetched_at"] = now
     return session
+
+
+def _classify_sts_error(exc: Exception) -> str:
+    """Map STS/boto errors to a short status. Never include secret material."""
+    code = ""
+    msg = str(exc)
+    if hasattr(exc, "response") and isinstance(exc.response, dict):
+        code = str((exc.response.get("Error") or {}).get("Code") or "")
+    combined = f"{code} {msg}".lower()
+    if any(tok in combined for tok in ("expiredtoken", "expired token", "request has expired")):
+        return "expired"
+    if any(tok in combined for tok in (
+        "invalidclienttokenid", "invalidaccesskeyid",
+        "unrecognizedclient", "the access key id does not exist",
+    )):
+        return "invalid"
+    if "signaturedoesnotmatch" in combined:
+        return "bad_secret"
+    if "security token" in combined and "invalid" in combined:
+        return "expired"
+    return "error"
+
+
+def check_aws_credentials() -> None:
+    """
+    Print whether local/Lambda AWS creds are usable. Does not print keys.
+    STS GetCallerIdentity is the check: valid vs expired vs invalid.
+    """
+    print("\n" + "─" * 60)
+    print("  AWS credentials")
+    print("─" * 60)
+
+    in_lambda = bool(os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+    access_key = (settings.AWS_ACCESS_KEY_ID or os.getenv("AWS_ACCESS_KEY_ID") or "").strip()
+    session_token = bool((os.getenv("AWS_SESSION_TOKEN") or "").strip())
+
+    if in_lambda:
+        print("  Source          : Lambda execution role")
+    elif access_key.startswith("ASIA"):
+        print("  Key type        : temporary STS (ASIA) — these expire")
+        print(f"  Session token   : {'present' if session_token else 'MISSING (required for ASIA keys)'}")
+        if not session_token:
+            print("  ✗  Not usable — ASIA keys need AWS_SESSION_TOKEN in backend/.env")
+            print("     Refresh keys from the AWS console and paste all three values.")
+            print("─" * 60 + "\n")
+            return
+    elif access_key.startswith("AKIA"):
+        print("  Key type        : IAM user (AKIA) — long-lived")
+        print(f"  Session token   : {'present' if session_token else 'not set'}")
+    elif access_key:
+        print("  Key type        : unrecognized prefix")
+    else:
+        print("  Key type        : default credential chain (~/.aws or instance role)")
+
+    try:
+        ident = make_aws_session().client("sts").get_caller_identity()
+        arn = ident.get("Arn") or ""
+        print("  STS             : valid")
+        if arn:
+            print(f"  Identity        : {arn}")
+        print("  ✓  Credentials are active (DynamoDB / Bedrock / this account).")
+    except Exception as exc:
+        status = _classify_sts_error(exc)
+        if status == "expired":
+            print("  STS             : EXPIRED")
+            print("  ✗  Refresh AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,")
+            print("     and AWS_SESSION_TOKEN in backend/.env, then restart.")
+        elif status == "invalid":
+            print("  STS             : INVALID (key id does not exist)")
+            print("  ✗  Paste a current access key from the AWS console.")
+        elif status == "bad_secret":
+            print("  STS             : SECRET MISMATCH")
+            print("  ✗  Secret key does not match the access key id.")
+        else:
+            print(f"  STS             : FAILED ({status})")
+            print(f"     {type(exc).__name__}: {exc}")
+        if access_key.startswith("ASIA"):
+            print("     Temporary keys expire in hours — all three values must be replaced together.")
+        print("─" * 60 + "\n")
+        return
+
+    _check_source_account_session()
+    print("─" * 60 + "\n")
+
+
+def _check_source_account_session() -> None:
+    """Show how S3 will authenticate. Does not print keys."""
+    env_creds = _source_creds_from_env()
+    secret_name = (settings.SOURCE_ACCOUNT_SECRET_NAME or "").strip()
+
+    print("  S3 / Pando")
+    if env_creds:
+        print("  Mode            : SOURCE_AWS_* keys in .env")
+    elif secret_name:
+        print(f"  Mode            : Secrets Manager ({secret_name})")
+    else:
+        print("  Mode            : same as this account (SSO)")
+        print("  ✗  Set SOURCE_ACCOUNT_SECRET_NAME or SOURCE_AWS_* in backend/.env")
+        print("     so S3 uses Pando keys instead of SSO.")
+        print("     Secret name on deploy: invoice-testing-agent/source-account-credentials")
+        return
+
+    try:
+        ident = make_source_aws_session().client("sts").get_caller_identity()
+        arn = ident.get("Arn") or ""
+        acct = ident.get("Account") or ""
+        print("  STS             : valid")
+        if arn:
+            print(f"  Identity        : {arn}")
+        if acct:
+            print(f"  Account         : {acct}")
+        print("  ✓  S3 will use this identity (mapping sheets + invoice PDFs).")
+    except Exception as exc:
+        status = _classify_sts_error(exc)
+        print(f"  STS             : FAILED ({status})")
+        print(f"     {type(exc).__name__}: {exc}")
+        if secret_name and not env_creds:
+            print("     SSO must be allowed secretsmanager:GetSecretValue on that secret.")

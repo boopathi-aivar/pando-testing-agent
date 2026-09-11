@@ -2,7 +2,7 @@ FROM public.ecr.aws/lambda/python:3.11
 
 # System deps needed by PyMuPDF (gcc-c++/make needed in case pip falls back to
 # building PyMuPDF from source when no matching manylinux wheel is found)
-RUN yum install -y gcc gcc-c++ make libffi-devel && yum clean all
+RUN yum install -y gcc gcc-c++ make libffi-devel libgomp && yum clean all
 
 WORKDIR ${LAMBDA_TASK_ROOT}
 

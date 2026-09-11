@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, LogIn, CheckCircle, Globe, BarChart2, Zap } from 'lucide-react'
+import { Eye, EyeOff, LogIn, CheckCircle, Globe, BarChart2, Zap, Moon, Sun } from 'lucide-react'
 import { login } from '../api/client'
+import BrandLockup from '../components/layout/BrandLockup'
+import { useTheme } from '../theme'
 
 const FEATURES = [
   { icon: Zap,         text: 'AI-powered invoice field extraction testing' },
@@ -10,17 +12,33 @@ const FEATURES = [
   { icon: CheckCircle, text: 'CloudWatch log analysis & SES report delivery' },
 ]
 
-function AivarIcon({ size = 36 }) {
+const CARRIERS = [
+  'Averitt', 'ABF Freight', 'Madison Logistics', 'Dayton', 'Hot Shot Freight',
+  'M & M Cartage', 'Christenson', 'FedEx Freight', 'UPS Freight', 'XPO',
+  'Old Dominion', 'Estes', 'Saia', 'R+L Carriers', 'Forward Air',
+]
+
+function BrandMarquee() {
+  const loop = [...CARRIERS, ...CARRIERS]
   return (
-    <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M14 2L25.5 8.5V19.5L14 26L2.5 19.5V8.5L14 2Z" stroke="white" strokeWidth="1.8" fill="none" strokeLinejoin="round"/>
-      <path d="M9 14.5L12.5 18L19 11" stroke="#A29BFE" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
+    <div className="brand-marquee py-3">
+      <div className="brand-marquee-track gap-3 pr-3">
+        {loop.map((name, i) => (
+          <span
+            key={`${name}-${i}`}
+            className="shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide whitespace-nowrap text-text-secondary bg-aivar-purple-50 border border-aivar-purple-200"
+          >
+            {name}
+          </span>
+        ))}
+      </div>
+    </div>
   )
 }
 
 export default function Login() {
   const navigate = useNavigate()
+  const { isDark, toggleTheme } = useTheme()
   const [email, setEmail]       = useState('pando@aivar.tech')
   const [password, setPassword] = useState('pando@123')
   const [showPwd, setShowPwd]   = useState(false)
@@ -42,85 +60,93 @@ export default function Login() {
     }
   }
 
+  const gridLine = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(17,24,39,0.06)'
+
   return (
-    <div className="min-h-screen flex" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div className="min-h-screen flex bg-background" style={{ fontFamily: 'Inter, sans-serif' }}>
 
-      {/* ── Left brand panel ────────────────────────────────────────── */}
-      <div
-        className="hidden lg:flex lg:w-[45%] flex-col justify-between px-12 py-10 relative overflow-hidden"
-        style={{ background: '#0D1117' }}
-      >
-        {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-10" style={{ background: '#6C5CE7', transform: 'translate(40%, -40%)' }} />
-        <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full opacity-10" style={{ background: '#6C5CE7', transform: 'translate(-40%, 40%)' }} />
-        <div className="absolute top-1/2 left-1/2 w-[500px] h-[500px] rounded-full opacity-[0.04]" style={{ background: '#A29BFE', transform: 'translate(-50%, -50%)' }} />
+      <div className="hidden lg:flex lg:w-[54%] flex-col justify-between relative overflow-hidden px-12 py-10">
+        <div
+          className="absolute -top-24 -right-16 w-[420px] h-[420px] rounded-full opacity-40"
+          style={{ background: 'radial-gradient(circle, #6C5CE7 0%, transparent 70%)', animation: 'float-orb 12s ease-in-out infinite' }}
+        />
+        <div
+          className="absolute bottom-10 -left-20 w-[340px] h-[340px] rounded-full opacity-30"
+          style={{ background: 'radial-gradient(circle, #A29BFE 0%, transparent 70%)', animation: 'float-orb 16s ease-in-out infinite reverse' }}
+        />
+        <div
+          className="absolute inset-0 opacity-[0.12]"
+          style={{
+            backgroundImage: `linear-gradient(${gridLine} 1px, transparent 1px), linear-gradient(90deg, ${gridLine} 1px, transparent 1px)`,
+            backgroundSize: '48px 48px',
+          }}
+        />
 
-        {/* Logo */}
         <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <AivarIcon size={40} />
-            <span className="text-white font-bold text-3xl tracking-widest uppercase">Aivar</span>
-          </div>
-          <p className="text-white/40 text-sm mt-2 tracking-widest uppercase font-medium">Pando Testing Agent</p>
+          <BrandLockup size="lg" onDark={isDark} />
         </div>
 
-        {/* Hero copy */}
-        <div className="relative z-10">
-          <h1 className="text-white font-bold leading-tight mb-4" style={{ fontSize: 36 }}>
-            Automate invoice<br />
-            <span style={{ color: '#A29BFE' }}>quality assurance</span><br />
-            at scale.
+        <div className="relative z-10 max-w-xl">
+          <p className="text-[#A29BFE] text-[11px] font-bold uppercase tracking-[0.22em] mb-4">Governed agentic QA</p>
+          <h1 className="text-text-primary font-bold leading-[1.08] mb-5 font-display" style={{ fontSize: 46 }}>
+            Invoice QA that<br />
+            finally earns its<br />
+            place in <span style={{ color: '#A29BFE' }}>production.</span>
           </h1>
-          <p className="text-white/60 text-base leading-relaxed mb-10">
-            Validate LLM extraction accuracy, score prompt quality,
-            and track field-level regressions — all in one platform.
+          <p className="text-text-secondary text-base leading-relaxed mb-8 max-w-md">
+            Score LLM extraction against the invoice PDF. Catch field regressions
+            across carriers — before they hit Pando.
           </p>
 
-          <div className="space-y-4">
+          <div className="space-y-3 mb-10">
             {FEATURES.map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(108,92,231,0.20)' }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-aivar-purple-100">
                   <Icon size={15} style={{ color: '#A29BFE' }} />
                 </div>
-                <span className="text-white/70 text-sm">{text}</span>
+                <span className="text-text-secondary text-sm">{text}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Bottom trust line */}
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="flex -space-x-2">
-            {['GE', 'DH', 'MR', 'FX'].map((initials) => (
-              <div key={initials} className="w-7 h-7 rounded-full border-2 flex items-center justify-center text-[9px] font-bold"
-                style={{ background: '#1C1F2E', borderColor: '#0D1117', color: '#A29BFE' }}>
-                {initials}
-              </div>
-            ))}
-          </div>
-          <p className="text-white/40 text-xs">Trusted by 6+ logistics teams</p>
+        <div className="relative z-10 -mx-12">
+          <p className="px-12 text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted mb-3">Trusted carriers</p>
+          <BrandMarquee />
         </div>
       </div>
 
-      {/* ── Right login form ─────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col items-center justify-center bg-background px-6 py-12">
-        {/* Mobile logo */}
-        <div className="flex items-center gap-2.5 mb-10 lg:hidden">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <path d="M14 2L25.5 8.5V19.5L14 26L2.5 19.5V8.5L14 2Z" stroke="#6C5CE7" strokeWidth="1.8" fill="none" strokeLinejoin="round"/>
-            <path d="M9 14.5L12.5 18L19 11" stroke="#A29BFE" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span className="font-bold text-2xl tracking-widest uppercase" style={{ color: '#6C5CE7' }}>Aivar</span>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative bg-background">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+          className="absolute top-6 right-6 z-20 w-9 h-9 flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary hover:bg-aivar-purple-50 transition-colors"
+          aria-label="Toggle theme"
+        >
+          {isDark ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+
+        <div
+          className="absolute inset-0 lg:hidden"
+          style={{
+            background: isDark
+              ? 'radial-gradient(circle at top, rgba(108,92,231,0.25), #07080C 55%)'
+              : 'radial-gradient(circle at top, rgba(108,92,231,0.12), #F4F5F8 55%)',
+          }}
+        />
+
+        <div className="relative z-10 mb-8 lg:hidden flex justify-center">
+          <BrandLockup size="md" onDark={isDark} />
         </div>
 
-        <div className="w-full max-w-md">
-          {/* Heading */}
-          <div className="mb-8">
-            <h2 className="text-text-primary font-bold text-2xl mb-1">Welcome back</h2>
-            <p className="text-text-muted text-sm">Sign in to Pando Testing Agent</p>
+        <div className="relative z-10 w-full max-w-md rounded-2xl p-8 border bg-surface border-border shadow-card">
+          <div className="mb-8 flex flex-col items-center text-center">
+            <BrandLockup size="md" onDark={isDark} />
+            <h2 className="text-text-primary font-bold text-2xl mt-6 mb-1 font-display">Welcome back</h2>
+            <p className="text-text-muted text-sm">Sign in to Testing Agent</p>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-text-primary text-sm font-semibold mb-2">Email address</label>
@@ -129,7 +155,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError('') }}
                 placeholder="you@example.com"
-                className="w-full py-3 px-4"
+                className="login-field w-full py-3 px-4"
                 autoComplete="email"
                 autoFocus
               />
@@ -143,13 +169,13 @@ export default function Login() {
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError('') }}
                   placeholder="••••••••"
-                  className="w-full py-3 px-4 pr-11"
+                  className="login-field w-full py-3 px-4 pr-11"
                   autoComplete="current-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPwd((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
                 >
                   {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -182,24 +208,14 @@ export default function Login() {
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
-
-          <div className="mt-8 p-4 bg-pando-green-50 border border-pando-green-100 rounded-xl">
-            <p className="text-pando-green text-xs font-semibold mb-2 uppercase tracking-wider">Demo credentials</p>
-            <div className="space-y-1 font-mono text-xs text-pando-green-600">
-              <div className="flex justify-between">
-                <span className="text-text-muted">Email</span>
-                <span className="font-semibold">pando@aivar.tech</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">Password</span>
-                <span className="font-semibold">pando@123</span>
-              </div>
-            </div>
-          </div>
         </div>
 
-        <p className="mt-10 text-text-muted text-xs text-center">
-          © 2024 Aivar · All rights reserved
+        <div className="relative z-10 mt-8 w-full max-w-md lg:hidden">
+          <BrandMarquee />
+        </div>
+
+        <p className="relative z-10 mt-8 text-text-muted text-xs text-center">
+          © 2026 Aivar · All rights reserved
         </p>
       </div>
     </div>
