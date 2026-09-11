@@ -6,6 +6,7 @@ Handles:
     (08/12/2026 == 12-Aug-2026 when one side is unambiguous)
   - numeric / currency differences (2,435.00 == 2435)
   - company legal suffixes / case (Madison Logistics == MADISON LOGISTICS INC)
+  - short brand vs legal name (Averitt == AVERITT EXPRESS INC.)
   - country code vs name (US == United States)
   - no-ground-truth rows (must not be marked "correct")
 """
@@ -230,6 +231,52 @@ def _norm_name(value: Any) -> str:
     return re.sub(r"[^a-z0-9]+", "", s)
 
 
+_NAME_SKIP = {"the", "a", "an", "and"}
+
+
+def _name_tokens(value: Any) -> list[str]:
+    s = (_as_str(value) or "").lower()
+    s = s.replace("&", " and ").replace("+", " and ")
+    s = _strip_legal_suffixes(s)
+    return [t for t in re.findall(r"[a-z0-9]+", s) if t and t not in _NAME_SKIP]
+
+
+def _names_match(expected: Any, actual: Any) -> bool:
+    """Same company: legal suffixes, or short brand vs full legal name.
+
+    Averitt == AVERITT EXPRESS INC.  (first token matches, brand is >= 5 chars)
+    Express != AVERITT EXPRESS INC.  (Express is not the leading brand)
+    GE != GE APPLIANCE               (too short to treat as the same name)
+    AP5 != GE APPLIANCE              (different entity)
+    """
+    n1, n2 = _norm_name(expected), _norm_name(actual)
+    if n1 and n1 == n2:
+        return True
+    ta, tb = _name_tokens(expected), _name_tokens(actual)
+    if not ta or not tb:
+        return False
+    short, longer = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+    if short[0] != longer[0]:
+        return False
+    if len("".join(short)) < 5:
+        return False
+    return set(short) <= set(longer)
+
+
+def default_failure_reason(
+    field_name: str, status: str, expected: Any, actual: Any,
+) -> str | None:
+    """Cheap fallback when the scoring LLM did not attach a reason."""
+    if status == "missing":
+        exp = _as_str(expected)
+        if exp:
+            return f"Lambda did not return {field_name}. Expected {exp}."
+        return f"Lambda did not return {field_name}."
+    if status == "wrong":
+        return f"Expected {_as_str(expected)} but Lambda sent {_as_str(actual)}."
+    return None
+
+
 def _norm_country(value: Any) -> str:
     key = _norm_text(value)
     if not key:
@@ -330,9 +377,8 @@ def values_match(field_name: str, expected: Any, actual: Any) -> bool:
         if e_c and a_c and e_c == a_c:
             return True
 
-    if _is_name_field(fname):
-        if _norm_name(expected) and _norm_name(expected) == _norm_name(actual):
-            return True
+    if _is_name_field(fname) and _names_match(expected, actual):
+        return True
 
     if _is_address_field(fname) and _address_match(expected, actual):
         return True
@@ -379,6 +425,18 @@ def _lookup_actual(payload: dict, field_name: str) -> Any:
             return payload[alt]
         if isinstance(custom, dict) and custom.get(alt) not in (None, ""):
             return custom[alt]
+    return None
+
+
+def _lookup_expected(expected_from_pdf: dict | None, field_name: str) -> Any:
+    """Fill empty row expected from Phase-1 PDF extract."""
+    if not isinstance(expected_from_pdf, dict) or not field_name:
+        return None
+    fname = field_name.lower().strip()
+    base = _base_field_name(field_name)
+    for key, val in expected_from_pdf.items():
+        if key.lower() in (fname, base) and not is_empty_expected(val):
+            return val
     return None
 
 
@@ -448,14 +506,23 @@ def rescore(validations: list, weights: dict | None = None, mandatory_fields: li
     return score, status
 
 
-def normalize_validations(validations: list, payload: dict | None = None) -> list:
+def normalize_validations(
+    validations: list,
+    payload: dict | None = None,
+    expected_from_pdf: dict | None = None,
+) -> list:
     """Rewrite LLM/fallback rows with deterministic comparison."""
     out = []
+    seen = set()
     for v in validations or []:
         if not isinstance(v, dict):
             continue
         name = v.get("field_name") or "unknown"
         expected = v.get("expected_value")
+        if is_empty_expected(expected):
+            filled = _lookup_expected(expected_from_pdf, name)
+            if filled not in (None, ""):
+                expected = filled
         actual = v.get("actual_value")
         if actual in (None, "", "null") and payload:
             looked = _lookup_actual(payload, name)
@@ -469,13 +536,43 @@ def normalize_validations(validations: list, payload: dict | None = None) -> lis
         row["status"] = status
         if is_empty_expected(expected):
             row["expected_value"] = None
-        elif status == "correct" and parse_date(expected) and parse_date(actual):
-            # keep original strings; status already format-agnostic
-            pass
+        else:
+            row["expected_value"] = str(expected)
+            if status != "unverified" and (row.get("source_used") or "") in (
+                "", "No ground truth", "Invoice PDF",
+            ):
+                row["source_used"] = "Invoice PDF"
         row["actual_value"] = None if _as_str(actual) is None else str(actual)
         if status == "unverified" and not row.get("source_used"):
             row["source_used"] = "No ground truth"
+        if status in ("wrong", "missing"):
+            existing = (row.get("reason") or "").strip()
+            row["reason"] = existing or default_failure_reason(name, status, expected, actual)
+        else:
+            row["reason"] = None
         out.append(row)
+        seen.add(_base_field_name(name))
+
+    for key, val in (expected_from_pdf or {}).items():
+        if not key or key == "charge_items" or is_empty_expected(val):
+            continue
+        if _base_field_name(key) in seen:
+            continue
+        actual = _lookup_actual(payload, key) if payload else None
+        status = classify_field(key, val, actual)
+        reason = None
+        if status in ("wrong", "missing"):
+            reason = default_failure_reason(key, status, val, actual)
+        out.append({
+            "field_name":     key,
+            "expected_value": str(val),
+            "actual_value":   None if _as_str(actual) is None else str(actual),
+            "status":         status,
+            "source_used":    "Invoice PDF",
+            "is_mandatory":   False,
+            "reason":         reason,
+        })
+        seen.add(_base_field_name(key))
     return out
 
 
@@ -495,7 +592,11 @@ def apply_comparison(
     except (TypeError, ValueError):
         pass
 
-    validations = normalize_validations(result.get("field_validations", []), payload)
+    validations = normalize_validations(
+        result.get("field_validations", []),
+        payload,
+        expected_from_pdf=result.get("expected_from_pdf") or {},
+    )
     tag_mandatory(validations, mandatory_fields)
     result["field_validations"] = validations
     score, status = rescore(validations, weights, mandatory_fields=mandatory_fields)

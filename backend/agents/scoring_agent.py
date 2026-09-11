@@ -123,6 +123,11 @@ Scoring (weights from project config):
 Generate specific, actionable suggestions for improving the Lambda's LLM prompt
 for every wrong or missing field (explain what instruction to add or change).
 
+For every wrong or missing field, set reason to one short sentence: what the
+processor extracted vs the invoice/mapping, and why they are not the same
+(wrong entity, truncated name, missing value, dock code instead of company).
+Do not put prompt-rewrite advice in reason.
+
 Respond with ONLY a valid JSON object — no text outside it:
 {
   "overall_score": <float 0.0-100.0>,
@@ -134,7 +139,8 @@ Respond with ONLY a valid JSON object — no text outside it:
       "actual_value":   "<from Lambda payload>",
       "status":         "correct" | "wrong" | "missing" | "unverified",
       "source_used":    "Invoice PDF" | "Field Mapping Sheet" | "Charge Map Sheet",
-      "is_mandatory":   true | false
+      "is_mandatory":   true | false,
+      "reason":         "<one sentence, only for wrong/missing>"
     }
   ],
   "suggestions": ["<specific prompt improvement>", ...]

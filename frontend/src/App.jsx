@@ -11,7 +11,8 @@ import Projects from './pages/Projects'
 import { getToken } from './api/client'
 
 const SIDEBAR_KEY = 'pando_sidebar_open'
-const SIDEBAR_WIDTH = 240
+const SIDEBAR_WIDTH = 300
+const SIDEBAR_COLLAPSED = 64
 
 function PrivateRoute({ children }) {
   return getToken() ? children : <Navigate to="/login" replace />
@@ -33,18 +34,17 @@ function Layout({ title, children }) {
     } catch { /* ignore */ }
   }, [sidebarOpen])
 
-  const offset = sidebarOpen ? SIDEBAR_WIDTH : 0
+  const offset = sidebarOpen ? SIDEBAR_WIDTH : SIDEBAR_COLLAPSED
 
   return (
-    <div>
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="min-h-screen bg-background">
+      <Sidebar open={sidebarOpen} onToggle={() => setSidebarOpen((v) => !v)} />
       <TopBar
         title={title}
         sidebarOpen={sidebarOpen}
-        onToggleSidebar={() => setSidebarOpen((v) => !v)}
       />
       <main
-        className="pt-14 min-h-screen bg-background transition-[margin] duration-200 ease-out"
+        className="pt-16 min-h-screen bg-background transition-[margin] duration-200 ease-out"
         style={{ marginLeft: offset }}
       >
         <div className="w-full max-w-[1680px] mx-auto px-8 py-8">

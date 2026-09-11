@@ -29,8 +29,9 @@ class FieldValidation(BaseModel):
     status: str = "missing"  # correct | wrong | missing | unverified
     source_used: str = ""
     is_mandatory: bool = False
+    reason: Optional[str] = None
 
-    @field_validator("expected_value", "actual_value", mode="before")
+    @field_validator("expected_value", "actual_value", "reason", mode="before")
     @classmethod
     def coerce_optional_str(cls, v: Any) -> Optional[str]:
         return _to_str(v)

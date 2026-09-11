@@ -3,6 +3,7 @@ LLM pass for remaining 'wrong' pairs after deterministic comparison.
 
 Used at scoring time only (not on every results GET). Marks
 equivalent_match so later display re-classify keeps the verdict.
+Also stores a short reason on pairs that stay wrong.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ Treat as equivalent:
 - Same company ignoring case, punctuation, Inc/LLC/Ltd/Co/Company
   MADISON LOGISTICS INC == Madison Logistics
   M & M Cartage Co., Inc. == M & M CARTAGE COMPANY INC
+- Short brand vs full legal name (Averitt == AVERITT EXPRESS INC.)
 - Same country as ISO code or English name (US == USA == United States)
 - Same street with extra city/state/zip on one side only
 - Same charge type with extra qualifier words
@@ -30,7 +32,7 @@ Treat as equivalent:
 Do NOT treat as equivalent:
 - Different companies, cities, or people
 - Different charge types (APPLIANCE PARTS != Base Freight, Flat Rate != Fuel Surcharge)
-- Short codes that are not the same entity (MRO vs Monogram Refrigeration)
+- Short codes that are not the same entity (MRO vs Monogram Refrigeration, AP5 vs GE APPLIANCE)
 - Different amounts or different calendar days
 - A field that extracted the wrong concept (shipper in source_name, etc.)
 
@@ -49,7 +51,7 @@ def _skip_numeric_mismatch(row: dict) -> bool:
     return False
 
 
-def _llm_equivalent_fields(rows: list[dict]) -> set[str]:
+def _llm_compare_fields(rows: list[dict]) -> dict[str, dict]:
     from strands import Agent
     from strands.models.bedrock import BedrockModel
     from config import settings
@@ -72,18 +74,23 @@ def _llm_equivalent_fields(rows: list[dict]) -> set[str]:
     start = text.find("{")
     end = text.rfind("}") + 1
     if start < 0 or end <= start:
-        return set()
+        return {}
     parsed = json.loads(text[start:end])
     matches = parsed.get("matches") if isinstance(parsed, dict) else parsed
     if not isinstance(matches, list):
-        return set()
-    equivalent = set()
+        return {}
+    out: dict[str, dict] = {}
     for item in matches:
-        if isinstance(item, dict) and item.get("equivalent") is True:
-            name = item.get("field_name")
-            if name:
-                equivalent.add(str(name))
-    return equivalent
+        if not isinstance(item, dict):
+            continue
+        name = item.get("field_name")
+        if not name:
+            continue
+        out[str(name)] = {
+            "equivalent": item.get("equivalent") is True,
+            "reason": str(item.get("reason") or "").strip(),
+        }
+    return out
 
 
 def apply_semantic_equivalence(
@@ -103,21 +110,27 @@ def apply_semantic_equivalence(
         return result
 
     try:
-        equivalent = _llm_equivalent_fields(candidates)
+        judgements = _llm_compare_fields(candidates)
     except Exception as e:
         print(f"[SemanticMatch] skipped: {e}")
         return result
 
-    if not equivalent:
+    if not judgements:
         return result
 
     flipped = 0
     for v in validations:
-        name = v.get("field_name")
-        if v.get("status") == "wrong" and name in equivalent:
+        name = str(v.get("field_name") or "")
+        judgement = judgements.get(name)
+        if not judgement or v.get("status") != "wrong":
+            continue
+        if judgement["equivalent"]:
             v["status"] = "correct"
             v["equivalent_match"] = True
+            v["reason"] = None
             flipped += 1
+        elif judgement.get("reason"):
+            v["reason"] = judgement["reason"]
 
     if flipped:
         print(f"[SemanticMatch] marked {flipped} field(s) equivalent.")

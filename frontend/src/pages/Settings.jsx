@@ -69,7 +69,7 @@ function ProjectRow({ project, onDeleted }) {
   const { label, cls } = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.never_tested
 
   return (
-    <tr className="border-b border-border hover:bg-background/70 transition-colors group">
+    <tr className="border-b border-border result-row-hover transition-colors group">
       <td className="px-5 py-4">
         <span
           className="text-text-primary font-semibold text-sm cursor-pointer group-hover:text-pando-green transition-colors"
@@ -156,7 +156,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Projects table card */}
-      <div className="bg-white border border-border rounded-2xl shadow-card overflow-hidden">
+      <div className="bg-surface border border-border rounded-2xl shadow-card overflow-hidden">
         {/* Card header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div>

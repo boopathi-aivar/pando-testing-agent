@@ -5,12 +5,12 @@ export default function ScoreBadge({ score, size = 52 }) {
   const offset = score != null ? circ * (1 - score / 100) : circ
 
   const color =
-    score == null ? '#D1D5DB'
-    : score >= 85 ? '#6C5CE7'
-    : score >= 60 ? '#A29BFE'
-    : '#DC2626'
+    score == null ? 'var(--color-border-strong)'
+    : score >= 85 ? '#A29BFE'
+    : score >= 60 ? '#C4BEFA'
+    : 'var(--color-danger)'
 
-  const textColor = score == null ? '#9CA3AF' : color
+  const textColor = score == null ? 'var(--color-text-muted)' : color
 
   // Always show integer — circle is too small for decimals
   const label = score != null ? `${Math.round(score)}%` : '—'
@@ -26,7 +26,7 @@ export default function ScoreBadge({ score, size = 52 }) {
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="#E8EAED"
+          stroke="var(--color-border)"
           strokeWidth={strokeWidth}
         />
         {score != null && (

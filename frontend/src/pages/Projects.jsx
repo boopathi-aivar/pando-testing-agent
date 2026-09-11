@@ -7,7 +7,7 @@ import { deleteProject } from '../api/client'
 
 function SkeletonCard() {
   return (
-    <div className="bg-white border border-border rounded-2xl p-5 shadow-card animate-pulse">
+    <div className="bg-surface border border-border rounded-2xl p-5 shadow-card animate-pulse">
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="h-4 w-32 bg-border rounded-lg mb-2" />

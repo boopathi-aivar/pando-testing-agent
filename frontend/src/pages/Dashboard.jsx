@@ -8,6 +8,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts'
 import { getDashboardSummary } from '../api/client'
+import { useTheme } from '../theme'
 
 const AIVAR = {
   purple:  '#6C5CE7',
@@ -23,17 +24,28 @@ const STATUS_PILL = {
   unscored: 'bg-[#6C5CE7]/10 text-[#6C5CE7] border-[#6C5CE7]/30',
 }
 
-const TOOLTIP_STYLE = {
-  background: '#fff',
-  border: '1px solid #C4BEFA',
-  borderRadius: 12,
-  fontSize: 12,
-  boxShadow: '0 4px 16px rgba(108,92,231,0.12)',
+function chartTheme(isDark) {
+  return {
+    tooltip: {
+      background: isDark ? '#1C1F2A' : '#fff',
+      border: isDark ? '1px solid rgba(255,255,255,0.16)' : '1px solid #C4BEFA',
+      borderRadius: 12,
+      fontSize: 12,
+      color: isDark ? '#F5F5F7' : '#111827',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+    },
+    tooltipLabel: { color: isDark ? '#F5F5F7' : '#111827', fontWeight: 600 },
+    tooltipItem: { color: isDark ? '#F5F5F7' : '#111827' },
+    legend: { fontSize: 12, color: isDark ? '#E6E8EE' : '#4B5563' },
+    grid: isDark ? 'rgba(255,255,255,0.08)' : '#E0DEFF',
+    tick: isDark ? '#8B8F9A' : '#9CA3AF',
+    tickStrong: isDark ? '#C5C8D0' : '#4B5563',
+  }
 }
 
 function StatCard({ label, value, icon: Icon, hint }) {
   return (
-    <div className="bg-white border border-pando-green-100 rounded-2xl p-5 shadow-card">
+    <div className="bg-surface border border-pando-green-100 rounded-2xl p-5 shadow-card">
       <div className="flex items-center justify-between mb-4">
         <span className="text-text-muted text-sm font-medium">{label}</span>
         <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-pando-green-50">
@@ -48,7 +60,7 @@ function StatCard({ label, value, icon: Icon, hint }) {
 
 function ChartCard({ title, subtitle, children }) {
   return (
-    <div className="bg-white border border-pando-green-100 rounded-2xl shadow-card p-5">
+    <div className="bg-surface border border-pando-green-100 rounded-2xl shadow-card p-5">
       <div className="mb-4">
         <p className="text-text-primary text-sm font-bold">{title}</p>
         {subtitle && <p className="text-text-muted text-xs mt-0.5">{subtitle}</p>}
@@ -71,12 +83,12 @@ function SkeletonDashboard() {
     <div className="animate-pulse">
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-white border border-pando-green-100 rounded-2xl p-5 h-[118px]" />
+          <div key={i} className="bg-surface border border-pando-green-100 rounded-2xl p-5 h-[118px]" />
         ))}
       </div>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-white border border-pando-green-100 rounded-2xl h-[300px]" />
+          <div key={i} className="bg-surface border border-pando-green-100 rounded-2xl h-[300px]" />
         ))}
       </div>
     </div>
@@ -92,6 +104,8 @@ function formatTs(ts) {
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { isDark } = useTheme()
+  const charts = chartTheme(isDark)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -172,7 +186,7 @@ export default function Dashboard() {
             className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
               projectFilter === 'all'
                 ? 'bg-pando-green text-white border-pando-green shadow-sm'
-                : 'bg-white text-text-secondary border-border hover:border-pando-green hover:text-pando-green'
+                : 'bg-surface text-text-secondary border-border hover:border-pando-green hover:text-pando-green'
             }`}
           >
             All projects
@@ -185,7 +199,7 @@ export default function Dashboard() {
               className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
                 projectFilter === p.project_id
                   ? 'bg-pando-green text-white border-pando-green shadow-sm'
-                  : 'bg-white text-text-secondary border-border hover:border-pando-green hover:text-pando-green'
+                  : 'bg-surface text-text-secondary border-border hover:border-pando-green hover:text-pando-green'
               }`}
             >
               {p.project_name}
@@ -230,10 +244,10 @@ export default function Dashboard() {
           {hasScores ? (
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={scoreByDay} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E0DEFF" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis domain={[0, 100]} tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => [`${v}%`, 'Avg score']} />
+                <CartesianGrid strokeDasharray="3 3" stroke={charts.grid} vertical={false} />
+                <XAxis dataKey="date" tick={{ fill: charts.tick, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 100]} tick={{ fill: charts.tick, fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip contentStyle={charts.tooltip} labelStyle={charts.tooltipLabel} itemStyle={charts.tooltipItem} formatter={(v) => [`${v}%`, 'Avg score']} />
                 <Line type="monotone" dataKey="avg_score" stroke={AIVAR.purple} strokeWidth={2.5} connectNulls={false} dot={{ r: 3, fill: AIVAR.purple }} />
               </LineChart>
             </ResponsiveContainer>
@@ -247,8 +261,8 @@ export default function Dashboard() {
                 <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={58} outerRadius={88} paddingAngle={3}>
                   {pieData.map((d) => <Cell key={d.name} fill={d.color} />)}
                 </Pie>
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+                <Tooltip contentStyle={charts.tooltip} labelStyle={charts.tooltipLabel} itemStyle={charts.tooltipItem} />
+                <Legend iconType="circle" wrapperStyle={charts.legend} />
               </PieChart>
             </ResponsiveContainer>
           ) : <EmptyChart />}
@@ -260,10 +274,10 @@ export default function Dashboard() {
           {total ? (
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={scoreByDay} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E0DEFF" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis allowDecimals={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => [v, 'Tests']} />
+                <CartesianGrid strokeDasharray="3 3" stroke={charts.grid} vertical={false} />
+                <XAxis dataKey="date" tick={{ fill: charts.tick, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fill: charts.tick, fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip contentStyle={charts.tooltip} labelStyle={charts.tooltipLabel} itemStyle={charts.tooltipItem} formatter={(v) => [v, 'Tests']} />
                 <Bar dataKey="tests" fill={AIVAR.purple} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -274,10 +288,10 @@ export default function Dashboard() {
           {carriers.length ? (
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={carriers} layout="vertical" margin={{ top: 8, right: 12, bottom: 0, left: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E0DEFF" horizontal={false} />
-                <XAxis type="number" domain={[0, 100]} tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="carrier" width={120} tick={{ fill: '#4B5563', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v, name) => [name === 'avg_score' ? `${v}%` : v, name === 'avg_score' ? 'Avg score' : 'Tests']} />
+                <CartesianGrid strokeDasharray="3 3" stroke={charts.grid} horizontal={false} />
+                <XAxis type="number" domain={[0, 100]} tick={{ fill: charts.tick, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="carrier" width={120} tick={{ fill: charts.tickStrong, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={charts.tooltip} labelStyle={charts.tooltipLabel} itemStyle={charts.tooltipItem} formatter={(v, name) => [name === 'avg_score' ? `${v}%` : v, name === 'avg_score' ? 'Avg score' : 'Tests']} />
                 <Bar dataKey="avg_score" fill={AIVAR.purple} radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -290,10 +304,10 @@ export default function Dashboard() {
           {hasFieldIssues ? (
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={fieldData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E0DEFF" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis allowDecimals={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
+                <CartesianGrid strokeDasharray="3 3" stroke={charts.grid} vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: charts.tick, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fill: charts.tick, fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip contentStyle={charts.tooltip} labelStyle={charts.tooltipLabel} itemStyle={charts.tooltipItem} />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                   {fieldData.map((d) => <Cell key={d.name} fill={d.fill} />)}
                 </Bar>
@@ -320,7 +334,7 @@ export default function Dashboard() {
                   {recent.map((r) => (
                     <tr
                       key={r.result_id}
-                      className="cursor-pointer hover:bg-pando-green-50/70"
+                      className="cursor-pointer result-row-hover"
                       onClick={() => r.project_id && navigate(`/project/${r.project_id}/results`)}
                     >
                       <td className="py-2 pr-3">
@@ -349,7 +363,7 @@ export default function Dashboard() {
       </div>
 
       {total === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 text-text-muted bg-white border border-pando-green-100 rounded-2xl shadow-card">
+        <div className="flex flex-col items-center justify-center py-12 text-text-muted bg-surface border border-pando-green-100 rounded-2xl shadow-card">
           <div className="w-14 h-14 rounded-2xl bg-pando-green-50 border-2 border-pando-green-100 flex items-center justify-center mb-4">
             <FolderOpen size={24} className="text-pando-green" />
           </div>

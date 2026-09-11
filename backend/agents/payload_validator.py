@@ -124,6 +124,9 @@ Amount fields:
 
 After validating, generate specific actionable prompt improvement suggestions.
 
+For every wrong or missing field, set reason to one short sentence explaining
+why it failed. Do not put prompt-rewrite advice in reason.
+
 Respond with ONLY a valid JSON object — no text outside it:
 {
   "overall_score": <float 0.0-100.0>,
@@ -135,7 +138,8 @@ Respond with ONLY a valid JSON object — no text outside it:
       "actual_value": "<actual or null>",
       "status": "correct" | "wrong" | "missing" | "unverified",
       "source_used": "Field Mapping Sheet | Charge Map Sheet | Embedded Prompt Mapping | LLM Response",
-      "is_mandatory": true | false
+      "is_mandatory": true | false,
+      "reason": "<one sentence, only for wrong/missing>"
     }
   ],
   "suggestions": ["<specific prompt improvement>", ...]

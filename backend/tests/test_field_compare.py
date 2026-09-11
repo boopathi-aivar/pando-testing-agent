@@ -38,6 +38,13 @@ def test_vendor_name_ignores_legal_suffix_and_case():
     assert classify_field("vendor_name", "Madison Logistics", "APS") == "wrong"
 
 
+def test_vendor_short_brand_matches_legal_name():
+    assert classify_field("vendor_name", "AVERITT EXPRESS INC.", "Averitt") == "correct"
+    assert classify_field("vendor_name", "AVERITT EXPRESS INC.", "Express") == "wrong"
+    assert classify_field("destination_name", "GE APPLIANCE", "AP5") == "wrong"
+    assert classify_field("vendor_name", "GE APPLIANCE", "GE") == "wrong"
+
+
 def test_country_code_matches_english_name():
     assert classify_field("origin_country", "US", "United States") == "correct"
     assert classify_field("destination_country", "USA", "US") == "correct"
@@ -110,6 +117,40 @@ def test_apply_comparison_rewrites_false_correct():
     assert statuses["vendor_reference_id"] == "correct"
     assert statuses["source_address"] == "missing"
     assert result["field_validations"][0]["expected_value"] is None
+
+
+def test_expected_from_pdf_fills_unverified_rows():
+    result = {
+        "status": "failed",
+        "overall_score": 0,
+        "expected_from_pdf": {
+            "invoice_number": "11498",
+            "invoice_date": "09/10/2026",
+            "total_invoice_value": "4401.62",
+        },
+        "field_validations": [
+            {
+                "field_name": "invoice_number",
+                "expected_value": None,
+                "actual_value": "11498",
+                "status": "unverified",
+                "is_mandatory": True,
+            },
+            {
+                "field_name": "invoice_date",
+                "expected_value": None,
+                "actual_value": "10-Sep-2026",
+                "status": "unverified",
+                "is_mandatory": True,
+            },
+        ],
+    }
+    apply_comparison(result, mandatory_fields=["invoice_number", "invoice_date"])
+    by_name = {v["field_name"]: v for v in result["field_validations"]}
+    assert by_name["invoice_number"]["status"] == "correct"
+    assert by_name["invoice_number"]["expected_value"] == "11498"
+    assert by_name["invoice_date"]["status"] == "correct"
+    assert result["overall_score"] == 100.0
 
 
 def test_score_uses_required_fields_only():
@@ -230,3 +271,53 @@ def test_all_unverified_is_unscored_not_failed():
     apply_comparison(result, mandatory_fields=["invoice_number", "invoice_date"])
     assert result["status"] == "unscored"
     assert all(v["status"] == "unverified" for v in result["field_validations"])
+
+
+def test_failure_reason_kept_on_wrong_and_cleared_on_correct():
+    result = {
+        "status": "failed",
+        "overall_score": 0,
+        "field_validations": [
+            {
+                "field_name": "destination_name",
+                "expected_value": "GE APPLIANCE",
+                "actual_value": "AP5",
+                "status": "wrong",
+                "reason": "AP5 is a location code, not the consignee GE APPLIANCE.",
+            },
+            {
+                "field_name": "vendor_name",
+                "expected_value": "AVERITT EXPRESS INC.",
+                "actual_value": "Averitt",
+                "status": "wrong",
+                "reason": "should be cleared after brand match",
+            },
+        ],
+    }
+    apply_comparison(result)
+    by_name = {v["field_name"]: v for v in result["field_validations"]}
+    dest = by_name["destination_name"]
+    vend = by_name["vendor_name"]
+    assert dest["status"] == "wrong"
+    assert "AP5" in dest["reason"]
+    assert vend["status"] == "correct"
+    assert not vend.get("reason")
+
+
+def test_wrong_field_gets_default_reason():
+    result = {
+        "status": "failed",
+        "overall_score": 0,
+        "field_validations": [
+            {
+                "field_name": "destination_name",
+                "expected_value": "GE APPLIANCE",
+                "actual_value": "AP5",
+                "status": "wrong",
+            },
+        ],
+    }
+    apply_comparison(result)
+    reason = result["field_validations"][0]["reason"]
+    assert "GE APPLIANCE" in reason
+    assert "AP5" in reason

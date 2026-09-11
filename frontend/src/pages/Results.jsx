@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react'
+import { Fragment, useRef, useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import {
   ChevronDown, Copy, Check, Clock, Zap, AlertTriangle,
@@ -46,18 +46,39 @@ function FieldStatusIcon({ status }) {
   return <AlertTriangle size={14} className="text-warning flex-shrink-0" />
 }
 
+function FieldStatusLabel({ status }) {
+  const label = status === 'wrong' ? 'Wrong' : status === 'missing' ? 'Missing' : status === 'unverified' ? 'Unverified' : 'Correct'
+  const pill =
+    status === 'wrong' ? 'bg-danger-bg text-danger'
+    : status === 'missing' ? 'bg-warning-bg text-warning'
+    : status === 'unverified' ? 'bg-aivar-purple-50 text-[#6C5CE7]'
+    : 'text-text-secondary'
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold capitalize ${status === 'correct' ? pill : `px-2 py-0.5 rounded-full ${pill}`}`}>
+      <FieldStatusIcon status={status} />
+      {label}
+    </span>
+  )
+}
+
+function failureReason(v) {
+  if (v.reason) return v.reason
+  if (v.status === 'missing') return 'Expected a value, but the extraction was empty.'
+  return 'Extracted value does not match the expected value.'
+}
+
 function fieldRowClass(status) {
-  if (status === 'correct')    return 'border-l-success bg-pando-green-50/30'
-  if (status === 'wrong')      return 'border-l-danger bg-danger-bg/50'
-  if (status === 'unverified') return 'border-l-[#6C5CE7] bg-[#6C5CE7]/5'
-  return 'border-l-warning bg-warning-bg/50'
+  if (status === 'correct')    return 'field-row-correct'
+  if (status === 'wrong')      return 'field-row-wrong'
+  if (status === 'unverified') return 'field-row-unverified'
+  return 'field-row-missing'
 }
 
 function fieldValueColor(status) {
-  if (status === 'correct')    return '#16A34A'
-  if (status === 'wrong')      return '#DC2626'
+  if (status === 'wrong')      return 'rgb(var(--c-danger))'
   if (status === 'unverified') return '#6C5CE7'
-  return '#D97706'
+  if (status === 'missing')    return 'rgb(var(--c-warning))'
+  return 'var(--color-text)'
 }
 
 function fieldSummary(result) {
@@ -139,55 +160,128 @@ function MandatoryFieldsBar({ mandatoryResult, scoreStatus }) {
   )
 }
 
+function RequiredMark() {
+  return (
+    <span
+      title="Required field"
+      className="inline-flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-full bg-pando-green text-white text-[8px] font-bold leading-none"
+    >
+      R
+    </span>
+  )
+}
+
 function FieldTable({ validations }) {
+  const [openRows, setOpenRows] = useState(() => new Set())
   const hasRequired = (validations || []).some((v) => v.is_mandatory)
+
+  const toggleRow = (i) => {
+    setOpenRows((prev) => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i)
+      else next.add(i)
+      return next
+    })
+  }
+
   return (
     <div className="overflow-x-auto">
       {hasRequired && (
         <p className="text-[11px] text-text-muted mb-2">
-          Score is based on <span className="font-semibold text-pando-green">required</span> fields. Optional fields are shown for review only.
+          Score is based on <span className="font-semibold text-pando-green">required</span> fields
+          <span className="inline-flex items-center gap-1 ml-1.5 align-middle">
+            <RequiredMark />
+          </span>
+          . Optional fields are shown for review only. Click a <span className="text-danger font-semibold">wrong</span> or <span className="text-warning font-semibold">missing</span> row to see why it failed.
         </p>
       )}
-      <table className="w-full text-sm">
+      <table className="w-full text-sm table-fixed">
         <thead>
-          <tr className="border-b-2 border-border">
-            {['Field Name', 'Expected', 'Actual (LLM)', 'Status', 'Source Used'].map((h) => (
-              <th key={h} className="text-left text-text-muted font-semibold pb-3 pr-4 text-xs uppercase tracking-wider">{h}</th>
-            ))}
+          <tr className="border-b border-border">
+            <th className="text-left text-text-muted font-semibold pb-3 pr-3 pl-2 text-[11px] uppercase tracking-wider w-[22%]">Field</th>
+            <th className="text-left text-text-muted font-semibold pb-3 pr-3 text-[11px] uppercase tracking-wider w-[26%]">Expected</th>
+            <th className="text-left text-text-muted font-semibold pb-3 pr-3 text-[11px] uppercase tracking-wider w-[26%]">Actual (LLM)</th>
+            <th className="text-left text-text-muted font-semibold pb-3 pr-3 text-[11px] uppercase tracking-wider w-[16%]">Status</th>
+            <th className="text-left text-text-muted font-semibold pb-3 text-[11px] uppercase tracking-wider w-[10%]">Source</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
-          {validations.map((v, i) => (
-            <tr key={i} className={`border-l-[3px] ${fieldRowClass(v.status)}`}>
-              <td className="py-2.5 pr-4 pl-2">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-mono text-text-primary text-xs font-semibold">{v.field_name}</span>
-                  {v.is_mandatory && (
-                    <span className="px-1.5 py-0.5 bg-pando-green text-white text-[9px] font-bold rounded uppercase tracking-wide leading-none">
-                      required
-                    </span>
-                  )}
-                </div>
-              </td>
-              <td className="py-2.5 pr-4 font-mono text-text-secondary text-xs">
-                {v.expected_value ?? (
-                  v.status === 'unverified'
-                    ? <span className="text-text-muted italic">no ground truth</span>
-                    : '—'
+        <tbody>
+          {validations.map((v, i) => {
+            const canExpand = v.status === 'wrong' || v.status === 'missing'
+            const isOpen = openRows.has(i)
+            return (
+              <Fragment key={i}>
+                <tr
+                  className={`${fieldRowClass(v.status)}${isOpen ? ' is-open' : ''}${canExpand ? ' is-expandable' : ''}`}
+                  onClick={canExpand ? () => toggleRow(i) : undefined}
+                  onKeyDown={canExpand ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRow(i) }
+                  } : undefined}
+                  tabIndex={canExpand ? 0 : undefined}
+                  role={canExpand ? 'button' : undefined}
+                  aria-expanded={canExpand ? isOpen : undefined}
+                  title={canExpand ? (isOpen ? 'Hide failure reason' : 'Show failure reason') : undefined}
+                >
+                  <td className="py-2.5 pr-3 pl-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="font-mono text-text-primary text-xs font-semibold truncate" title={v.field_name}>
+                        {v.field_name}
+                      </span>
+                      {v.is_mandatory && <RequiredMark />}
+                    </div>
+                  </td>
+                  <td className="py-2.5 pr-3 font-mono text-text-secondary text-xs truncate" title={v.expected_value || ''}>
+                    {v.expected_value ?? (
+                      v.status === 'unverified'
+                        ? <span className="text-text-muted italic">no ground truth</span>
+                        : '—'
+                    )}
+                  </td>
+                  <td className="py-2.5 pr-3 font-mono text-xs font-medium truncate" style={{ color: fieldValueColor(v.status) }} title={v.actual_value || ''}>
+                    {v.actual_value ?? <span className="text-warning italic">missing</span>}
+                  </td>
+                  <td className="py-2.5 pr-3">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <FieldStatusLabel status={v.status} />
+                      {canExpand && (
+                        <ChevronDown
+                          size={14}
+                          className={`flex-shrink-0 text-text-muted transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                        />
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-2.5 text-text-muted text-xs truncate" title={v.source_used}>{v.source_used}</td>
+                </tr>
+                {canExpand && isOpen && (
+                  <tr className={`field-row-reason ${v.status === 'missing' ? 'is-missing' : 'is-wrong'}`}>
+                    <td colSpan={5} className="px-3 py-3">
+                      <div className="rounded-lg border border-border px-3.5 py-3 bg-surface">
+                        <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${v.status === 'missing' ? 'text-warning' : 'text-danger'}`}>
+                          Why {v.field_name} failed
+                        </p>
+                        <p className="text-sm text-text-primary leading-relaxed mb-3">{failureReason(v)}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Expected</p>
+                            <p className="font-mono text-xs text-text-secondary whitespace-pre-wrap break-words">
+                              {v.expected_value || '—'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Actual</p>
+                            <p className="font-mono text-xs font-medium whitespace-pre-wrap break-words" style={{ color: fieldValueColor(v.status) }}>
+                              {v.actual_value || 'missing'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
                 )}
-              </td>
-              <td className="py-2.5 pr-4 font-mono text-xs font-medium" style={{ color: fieldValueColor(v.status) }}>
-                {v.actual_value ?? <span className="text-warning italic">missing</span>}
-              </td>
-              <td className="py-2.5 pr-4">
-                <div className="flex items-center gap-1.5">
-                  <FieldStatusIcon status={v.status} />
-                  <span className="text-xs capitalize text-text-secondary font-medium">{v.status}</span>
-                </div>
-              </td>
-              <td className="py-2.5 text-text-muted text-xs">{v.source_used}</td>
-            </tr>
-          ))}
+              </Fragment>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -281,9 +375,9 @@ function ResultRow({ result, onRetestDone, onDeleted }) {
   ]
 
   return (
-    <div className="bg-white border border-border rounded-2xl overflow-hidden mb-2 shadow-card hover:shadow-card-hover transition-shadow">
+    <div className="bg-surface border border-border rounded-2xl overflow-hidden mb-2 shadow-card hover:shadow-card-hover transition-shadow">
       <div
-        className={`${ROW_COLS} min-h-[72px] cursor-pointer hover:bg-background/60 transition-colors`}
+        className={`${ROW_COLS} min-h-[72px] cursor-pointer result-row-hover transition-colors`}
         onClick={handleToggle}
       >
         <div className="min-w-0 py-3">
@@ -293,7 +387,7 @@ function ResultRow({ result, onRetestDone, onDeleted }) {
             <span className="truncate">{formatTimestamp(result.timestamp)}</span>
             {result.vendor_name && (
               <>
-                <span className="text-border">·</span>
+                <span className="text-text-muted">·</span>
                 <Truck size={10} className="flex-shrink-0" />
                 <span className="truncate">{result.vendor_name}</span>
               </>
@@ -311,7 +405,7 @@ function ResultRow({ result, onRetestDone, onDeleted }) {
           </span>
         </div>
 
-        <p className="text-text-muted text-xs truncate">{summary}</p>
+        <p className="text-text-secondary text-xs truncate">{summary}</p>
 
         <div className="flex justify-center">
           {result.api_status
@@ -362,7 +456,7 @@ function ResultRow({ result, onRetestDone, onDeleted }) {
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
                   activeTab === t.id
                     ? 'bg-pando-green text-white shadow-sm'
-                    : 'text-text-secondary hover:bg-white hover:text-pando-green border border-transparent hover:border-border'
+                    : 'text-text-secondary hover:bg-surface hover:text-pando-green border border-transparent hover:border-border'
                 }`}
               >
                 {t.label}
@@ -481,7 +575,7 @@ function ResultRow({ result, onRetestDone, onDeleted }) {
 
 function SkeletonResult() {
   return (
-    <div className="bg-white border border-border rounded-2xl px-5 py-4 mb-3 shadow-card animate-pulse">
+    <div className="bg-surface border border-border rounded-2xl px-5 py-4 mb-3 shadow-card animate-pulse">
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <div className="h-4 w-36 bg-border rounded-lg mb-2" />
@@ -533,7 +627,7 @@ export default function Results() {
   return (
     <div>
       {/* Header card */}
-      <div className="bg-white border border-border rounded-2xl shadow-card px-6 py-5 mb-6">
+      <div className="bg-surface border border-border rounded-2xl shadow-card px-6 py-5 mb-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-text-primary font-bold text-2xl tracking-tight">{project?.project_name ?? projectId}</h1>
@@ -563,7 +657,7 @@ export default function Results() {
       </div>
 
       {/* Filter bar */}
-      <div className="sticky top-14 z-10 bg-background pb-4 pt-0.5 space-y-3">
+      <div className="sticky top-16 z-10 bg-background pb-4 pt-0.5 space-y-3">
         <div className="flex items-center gap-3">
           <input
             type="text"
@@ -572,7 +666,7 @@ export default function Results() {
             onChange={(e) => setInvoiceSearch(e.target.value)}
             className="w-60 text-sm"
           />
-          <div className="flex items-center gap-0.5 bg-white border border-border rounded-xl p-1 shadow-sm">
+          <div className="flex items-center gap-0.5 bg-surface border border-border rounded-xl p-1 shadow-sm">
             {STATUS_TABS.map((s) => (
               <button
                 key={s}
@@ -605,7 +699,7 @@ export default function Results() {
                 className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
                   carrierFilter === c
                     ? 'bg-pando-green text-white border-pando-green shadow-sm'
-                    : 'bg-white text-text-secondary border-border hover:border-pando-green hover:text-pando-green'
+                    : 'bg-surface text-text-secondary border-border hover:border-pando-green hover:text-pando-green'
                 }`}
               >
                 {c === 'all' ? 'All Carriers' : c}
@@ -625,7 +719,7 @@ export default function Results() {
       {loading ? (
         <div>{Array.from({ length: 3 }).map((_, i) => <SkeletonResult key={i} />)}</div>
       ) : results.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-text-muted bg-white border border-border rounded-2xl shadow-card">
+        <div className="flex flex-col items-center justify-center py-20 text-text-muted bg-surface border border-border rounded-2xl shadow-card">
           <div className="w-14 h-14 rounded-2xl bg-pando-green-50 border-2 border-pando-green-100 flex items-center justify-center mb-4">
             <FileText size={24} className="text-pando-green" />
           </div>
@@ -637,7 +731,7 @@ export default function Results() {
       ) : (
         <div className="overflow-x-auto">
           <div className="min-w-[860px]">
-            <div className={`${ROW_COLS} h-8 text-[11px] font-semibold uppercase tracking-wider text-text-muted`}>
+            <div className={`${ROW_COLS} h-8 text-[11px] font-semibold uppercase tracking-wider text-text-secondary`}>
               <span>Invoice</span>
               <span className="text-center" title="Required fields only">Score</span>
               <span>Status</span>

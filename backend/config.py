@@ -28,6 +28,10 @@ class Settings:
     # Region the source account's S3 bucket / CloudWatch log group live in.
     # Falls back to AWS_REGION if not set.
     SOURCE_ACCOUNT_REGION: str = os.getenv("SOURCE_ACCOUNT_REGION", "") or AWS_REGION
+    # Optional local override: Pando IAM keys in .env (skips Secrets Manager).
+    SOURCE_AWS_ACCESS_KEY_ID: str     = os.getenv("SOURCE_AWS_ACCESS_KEY_ID", "")
+    SOURCE_AWS_SECRET_ACCESS_KEY: str = os.getenv("SOURCE_AWS_SECRET_ACCESS_KEY", "")
+    SOURCE_AWS_SESSION_TOKEN: str    = os.getenv("SOURCE_AWS_SESSION_TOKEN", "")
 
 
 settings = Settings()
@@ -81,15 +85,43 @@ def _fetch_source_credentials() -> dict:
     }
 
 
+def _source_creds_from_env() -> dict | None:
+    """Pando IAM keys pasted into .env for local testing."""
+    key = (settings.SOURCE_AWS_ACCESS_KEY_ID or "").strip()
+    secret = (settings.SOURCE_AWS_SECRET_ACCESS_KEY or "").strip()
+    if not key or not secret:
+        return None
+    return {
+        "access_key_id":     key,
+        "secret_access_key": secret,
+        "session_token":     (settings.SOURCE_AWS_SESSION_TOKEN or "").strip(),
+    }
+
+
+def _session_from_source_creds(creds: dict) -> boto3.Session:
+    return boto3.Session(
+        aws_access_key_id     = creds["access_key_id"],
+        aws_secret_access_key = creds["secret_access_key"],
+        aws_session_token     = creds.get("session_token") or None,
+        region_name           = settings.SOURCE_ACCOUNT_REGION,
+    )
+
+
 def make_source_aws_session() -> boto3.Session:
     """
     Return a boto3 Session for the OTHER AWS account where the invoice
     processor's S3 bucket and CloudWatch log group actually live.
 
-    If SOURCE_ACCOUNT_SECRET_NAME is not configured, falls back to this
-    account's own session — i.e. behaves exactly as before for setups where
-    everything is in one account.
+    Resolution order (local and Lambda):
+      1. SOURCE_AWS_ACCESS_KEY_ID + SOURCE_AWS_SECRET_ACCESS_KEY in env
+      2. SOURCE_ACCOUNT_SECRET_NAME → Secrets Manager in this account
+      3. This account's own session (SSO) — S3 will fail if that role
+         cannot read the Pando buckets
     """
+    env_creds = _source_creds_from_env()
+    if env_creds:
+        return _session_from_source_creds(env_creds)
+
     if not settings.SOURCE_ACCOUNT_SECRET_NAME:
         return make_aws_session()
 
@@ -101,12 +133,7 @@ def make_source_aws_session() -> boto3.Session:
         return _source_session_cache["session"]
 
     creds = _fetch_source_credentials()
-    session = boto3.Session(
-        aws_access_key_id     = creds["access_key_id"],
-        aws_secret_access_key = creds["secret_access_key"],
-        aws_session_token     = creds.get("session_token") or None,
-        region_name           = settings.SOURCE_ACCOUNT_REGION,
-    )
+    session = _session_from_source_creds(creds)
     _source_session_cache["session"]    = session
     _source_session_cache["fetched_at"] = now
     return session
@@ -171,7 +198,6 @@ def check_aws_credentials() -> None:
         if arn:
             print(f"  Identity        : {arn}")
         print("  ✓  Credentials are active (DynamoDB / Bedrock / this account).")
-        print("     Invoice PDFs still need S3 permission on the Pando bucket.")
     except Exception as exc:
         status = _classify_sts_error(exc)
         if status == "expired":
@@ -189,5 +215,43 @@ def check_aws_credentials() -> None:
             print(f"     {type(exc).__name__}: {exc}")
         if access_key.startswith("ASIA"):
             print("     Temporary keys expire in hours — all three values must be replaced together.")
+        print("─" * 60 + "\n")
+        return
 
+    _check_source_account_session()
     print("─" * 60 + "\n")
+
+
+def _check_source_account_session() -> None:
+    """Show how S3 will authenticate. Does not print keys."""
+    env_creds = _source_creds_from_env()
+    secret_name = (settings.SOURCE_ACCOUNT_SECRET_NAME or "").strip()
+
+    print("  S3 / Pando")
+    if env_creds:
+        print("  Mode            : SOURCE_AWS_* keys in .env")
+    elif secret_name:
+        print(f"  Mode            : Secrets Manager ({secret_name})")
+    else:
+        print("  Mode            : same as this account (SSO)")
+        print("  ✗  Set SOURCE_ACCOUNT_SECRET_NAME or SOURCE_AWS_* in backend/.env")
+        print("     so S3 uses Pando keys instead of SSO.")
+        print("     Secret name on deploy: invoice-testing-agent/source-account-credentials")
+        return
+
+    try:
+        ident = make_source_aws_session().client("sts").get_caller_identity()
+        arn = ident.get("Arn") or ""
+        acct = ident.get("Account") or ""
+        print("  STS             : valid")
+        if arn:
+            print(f"  Identity        : {arn}")
+        if acct:
+            print(f"  Account         : {acct}")
+        print("  ✓  S3 will use this identity (mapping sheets + invoice PDFs).")
+    except Exception as exc:
+        status = _classify_sts_error(exc)
+        print(f"  STS             : FAILED ({status})")
+        print(f"     {type(exc).__name__}: {exc}")
+        if secret_name and not env_creds:
+            print("     SSO must be allowed secretsmanager:GetSecretValue on that secret.")

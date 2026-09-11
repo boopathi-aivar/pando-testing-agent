@@ -49,7 +49,7 @@ export default function RunTestModal({ project, onClose, onViewResults }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={state === 'ready' ? onClose : undefined} />
-      <div className="relative bg-white rounded-2xl shadow-modal p-8 w-[480px] mx-4 border border-border">
+      <div className="relative bg-surface rounded-2xl shadow-modal p-8 w-[480px] mx-4 border border-border">
 
         {state !== 'running' && (
           <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:bg-background hover:text-text-secondary transition-colors">

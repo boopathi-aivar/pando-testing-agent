@@ -4,15 +4,15 @@ import { Copy, Check } from 'lucide-react'
 function JsonNode({ data, depth }) {
   const [collapsed, setCollapsed] = useState(depth > 1)
 
-  if (data === null) return <span style={{ color: '#6B7280' }}>null</span>
-  if (typeof data === 'boolean') return <span style={{ color: '#7C3AED' }}>{String(data)}</span>
-  if (typeof data === 'number') return <span style={{ color: '#B45309' }}>{data}</span>
-  if (typeof data === 'string') return <span style={{ color: '#065F46' }}>"{data}"</span>
+  if (data === null) return <span style={{ color: 'var(--color-text-muted)' }}>null</span>
+  if (typeof data === 'boolean') return <span style={{ color: '#A29BFE' }}>{String(data)}</span>
+  if (typeof data === 'number') return <span style={{ color: 'var(--color-warning)' }}>{data}</span>
+  if (typeof data === 'string') return <span style={{ color: 'var(--color-success)' }}>"{data}"</span>
 
   if (Array.isArray(data)) {
     if (collapsed) {
       return (
-        <span className="cursor-pointer hover:underline" style={{ color: '#6B7280' }} onClick={() => setCollapsed(false)}>
+        <span className="cursor-pointer hover:underline" style={{ color: 'var(--color-text-muted)' }} onClick={() => setCollapsed(false)}>
           [...{data.length} items]
         </span>
       )
@@ -37,7 +37,7 @@ function JsonNode({ data, depth }) {
     const keys = Object.keys(data)
     if (collapsed) {
       return (
-        <span className="cursor-pointer hover:underline" style={{ color: '#6B7280' }} onClick={() => setCollapsed(false)}>
+        <span className="cursor-pointer hover:underline" style={{ color: 'var(--color-text-muted)' }} onClick={() => setCollapsed(false)}>
           {'{'}...{keys.length} keys{'}'}
         </span>
       )
@@ -76,7 +76,7 @@ export default function JsonViewer({ data }) {
     <div className="relative bg-pando-green-50 border border-pando-green-100 rounded-xl p-4 overflow-auto max-h-80" style={{ fontFamily: 'monospace', fontSize: 13, lineHeight: 1.6 }}>
       <button
         onClick={handleCopy}
-        className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-border text-text-secondary hover:text-pando-green hover:border-pando-green transition-colors text-xs shadow-sm"
+        className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface border border-border text-text-secondary hover:text-pando-green hover:border-pando-green transition-colors text-xs shadow-sm"
       >
         {copied ? <><Check size={12} className="text-success" /> Copied!</> : <><Copy size={12} /> Copy</>}
       </button>
