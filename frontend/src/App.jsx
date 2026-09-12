@@ -8,6 +8,8 @@ import Results from './pages/Results'
 import Login from './pages/Login'
 import SettingsPage from './pages/Settings'
 import Projects from './pages/Projects'
+import Documentation from './pages/Documentation'
+import DocumentationDetail from './pages/DocumentationDetail'
 import { getToken } from './api/client'
 
 const SIDEBAR_KEY = 'pando_sidebar_open'
@@ -64,6 +66,8 @@ export default function App() {
         <Route path="/projects" element={<PrivateRoute><Layout title="Projects"><Projects /></Layout></PrivateRoute>} />
         <Route path="/project/:projectId/configure" element={<PrivateRoute><Layout title="Configure Project"><Configure /></Layout></PrivateRoute>} />
         <Route path="/project/:projectId/results" element={<PrivateRoute><Layout title="Test Results"><Results /></Layout></PrivateRoute>} />
+        <Route path="/documentation" element={<PrivateRoute><Layout title="Documentation"><Documentation /></Layout></PrivateRoute>} />
+        <Route path="/documentation/:docId" element={<PrivateRoute><Layout title="Documentation"><DocumentationDetail /></Layout></PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute><Layout title="Settings"><SettingsPage /></Layout></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -19,6 +19,7 @@ _AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
 _PROJECTS_TABLE = os.getenv("PROJECTS_TABLE", "pando-projects")
 _RESULTS_TABLE  = os.getenv("RESULTS_TABLE",  "pando-results")
 _JOBS_TABLE     = os.getenv("JOBS_TABLE",     "pando-jobs")
+_DOCS_TABLE     = os.getenv("DOCS_TABLE",     "pando-doc-projects")
 
 _dynamodb = None
 
@@ -42,6 +43,10 @@ def tbl_jobs():
     return _get_resource().Table(_JOBS_TABLE)
 
 
+def tbl_docs():
+    return _get_resource().Table(_DOCS_TABLE)
+
+
 def check_connection() -> None:
     print("\n" + "─" * 60)
     print("  DynamoDB connection check")
@@ -49,6 +54,7 @@ def check_connection() -> None:
     print(f"  Projects table  : {_PROJECTS_TABLE}")
     print(f"  Results table   : {_RESULTS_TABLE}")
     print(f"  Jobs table      : {_JOBS_TABLE}")
+    print(f"  Docs table      : {_DOCS_TABLE}")
     print("─" * 60)
 
     try:
@@ -128,3 +134,17 @@ def ensure_tables() -> None:
             TimeToLiveSpecification={"Enabled": True, "AttributeName": "ttl"},
         )
         print(f"[DynamoDB] Created table: {_JOBS_TABLE} (TTL on 'ttl' attribute)")
+
+    # ── pando-doc-projects ────────────────────────────────────────────────────
+    if _DOCS_TABLE not in existing:
+        client.create_table(
+            TableName=_DOCS_TABLE,
+            BillingMode="PAY_PER_REQUEST",
+            AttributeDefinitions=[
+                {"AttributeName": "doc_id", "AttributeType": "S"},
+            ],
+            KeySchema=[
+                {"AttributeName": "doc_id", "KeyType": "HASH"},
+            ],
+        )
+        print(f"[DynamoDB] Created table: {_DOCS_TABLE}")
