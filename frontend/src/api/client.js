@@ -69,6 +69,32 @@ export async function deleteProject(id) {
   if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail ?? `Delete failed: ${res.status}`) }
 }
 
+// ─── Documentation projects ────────────────────────────────────────────────────
+export async function getDocProjects() {
+  return request('/doc-projects')
+}
+
+export async function getDocProject(id) {
+  return request(`/doc-projects/${id}`)
+}
+
+export async function createDocProject(data) {
+  return request('/doc-projects', { method: 'POST', body: JSON.stringify(data) })
+}
+
+export async function deleteDocProject(id) {
+  const token = getToken()
+  const headers = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(`${API_BASE}/api/doc-projects/${id}`, { method: 'DELETE', headers })
+  if (res.status === 401) { clearAuth(); window.location.href = '/login'; throw new Error('Session expired') }
+  if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail ?? `Delete failed: ${res.status}`) }
+}
+
+export async function getDocProjectSummary(id) {
+  return request(`/doc-projects/${id}/summary`)
+}
+
 // ─── Results ──────────────────────────────────────────────────────────────────
 export async function getResults(projectId, filters = {}) {
   const params = new URLSearchParams(
