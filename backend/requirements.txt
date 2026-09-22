@@ -14,3 +14,11 @@ PyMuPDF>=1.24.0
 numpy>=1.26.0
 rapidocr-onnxruntime>=1.2.3
 onnxruntime>=1.17.0
+
+# Prompt Generator (inv_automate) dependencies
+python-multipart>=0.0.12
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-ollama>=0.2.0
+markitdown[pdf]>=0.1.5
+jsonschema>=4.20.0

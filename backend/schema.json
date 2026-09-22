@@ -1,0 +1,804 @@
+{
+    "pk": {
+      "S": "EMAIL#1ed642jmink4t4mvm39hrlj8fuf048rd1lhv3jo1"
+    },
+    "sk": {
+      "S": "ATTACHMENT#3da64b3c-0578-4b18-8294-44b5dbb4c0c5"
+    },
+    "api_payload": {
+      "S": "{\"data\": [{\"invoice_number\": \"29669\", \"invoice_date\": \"2026-07-06T12:00:00.000Z\", \"payment_due_date\": \"2026-08-05T12:00:00.000Z\", \"vendor_reference_id\": \"102518\", \"currency\": \"USD\", \"total_invoice_value\": 4477.25, \"total_tax_amount\": 0.0, \"bill_of_lading_number\": \"\", \"bill_of_entry_number\": \"\", \"bill_to_name\": \"Delicato Vineyards\", \"bill_to_gst\": \"\", \"bill_to_address\": \"12001 So. Hwy. 99, MANTECA, CA 95336\", \"bill_to_phone_number\": \"\", \"bill_to_email\": \"\", \"billing_entity_name\": \"\", \"custom\": {\"source_type\": \"email\", \"shipper_email\": \"delicatotest@pibypando.ai\", \"sender_email\": \"jeeva@freehand.ai\", \"vendor_name\": \"Yandell Truckaway, Inc.\", \"client_id\": 50, \"attachment_key\": \"invoice/input/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1).pdf\", \"attachment_bucket\": \"nam-pando-delicato-bucket\", \"pay_as_present\": false, \"transaction_id\": \"3da64b3c-0578-4b18-8294-44b5dbb4c0c5\", \"po_number\": [\"141008\", \"BENICIA4434\"], \"bol_number\": [\"8-227479\", \"8-227476\", \"105350\", \"06252026\", \"80227871\", \"226567\", \"8-227773\", \"379143\"], \"tractor_trailer_number\": [], \"order_number\": [\"0377638\", \"0377796\", \"0378642\", \"0378710\", \"0378711\", \"0379136\", \"0379143\"], \"load_number\": \"\"}, \"payment_terms\": \"net 30\", \"airway_bill_number\": \"\", \"hsn_number\": \"\", \"documents_attachment\": [{\"file_path\": \"cluster_documents/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_0_Freight_Invoice.pdf\", \"bucket_name\": \"pando-delicato-bucket\", \"file_name\": \"d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_0_Freight_Invoice.pdf\", \"file_extension\": \"pdf\", \"type\": \"Freight Invoice\"}, {\"file_path\": \"cluster_documents/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_1_Transport_Document.pdf\", \"bucket_name\": \"pando-delicato-bucket\", \"file_name\": \"d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_1_Transport_Document.pdf\", \"file_extension\": \"pdf\", \"type\": \"Transport Document\"}, {\"file_path\": \"cluster_documents/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_2_Transport_Document.pdf\", \"bucket_name\": \"pando-delicato-bucket\", \"file_name\": \"d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_2_Transport_Document.pdf\", \"file_extension\": \"pdf\", \"type\": \"Transport Document\"}, {\"file_path\": \"cluster_documents/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_3_Transport_Document.pdf\", \"bucket_name\": \"pando-delicato-bucket\", \"file_name\": \"d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_3_Transport_Document.pdf\", \"file_extension\": \"pdf\", \"type\": \"Transport Document\"}, {\"file_path\": \"cluster_documents/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_4_Transport_Document.pdf\", \"bucket_name\": \"pando-delicato-bucket\", \"file_name\": \"d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_4_Transport_Document.pdf\", \"file_extension\": \"pdf\", \"type\": \"Transport Document\"}, {\"file_path\": \"cluster_documents/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_5_Transport_Document.pdf\", \"bucket_name\": \"pando-delicato-bucket\", \"file_name\": \"d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_5_Transport_Document.pdf\", \"file_extension\": \"pdf\", \"type\": \"Transport Document\"}, {\"file_path\": \"cluster_documents/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_6_Transport_Document.pdf\", \"bucket_name\": \"pando-delicato-bucket\", \"file_name\": \"d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_6_Transport_Document.pdf\", \"file_extension\": \"pdf\", \"type\": \"Transport Document\"}, {\"file_path\": \"cluster_documents/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_7_Transport_Document.pdf\", \"bucket_name\": \"pando-delicato-bucket\", \"file_name\": \"d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_7_Transport_Document.pdf\", \"file_extension\": \"pdf\", \"type\": \"Transport Document\"}, {\"file_path\": \"cluster_documents/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_8_Transport_Document.pdf\", \"bucket_name\": \"pando-delicato-bucket\", \"file_name\": \"d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_8_Transport_Document.pdf\", \"file_extension\": \"pdf\", \"type\": \"Transport Document\"}, {\"file_path\": \"cluster_documents/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_9_Transport_Document.pdf\", \"bucket_name\": \"pando-delicato-bucket\", \"file_name\": \"d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_9_Transport_Document.pdf\", \"file_extension\": \"pdf\", \"type\": \"Transport Document\"}], \"shipments\": [{\"shipment_number\": \"0377638\", \"consignee_name\": \"\", \"shipment_tracking_number\": \"\", \"stopover_location\": \"\", \"dangerous_goods_indicator\": false, \"thu_type\": \"van\", \"thu_name\": \"van\", \"service_level\": \"\", \"number_of_pallets\": 0.0, \"custom\": {\"delivery_type\": \"\", \"freight_provider\": \"\", \"material_category\": \"Cased Wine\"}, \"pro_number\": \"\", \"mode\": \"ROAD\", \"source_name\": \"Delicato\", \"source_city\": \"Manteca\", \"source_state\": \"CA\", \"source_country\": \"US\", \"source_country_code\": \"\", \"source_address\": \"12001 South Highway 99\", \"source_province\": \"\", \"source_region\": \"\", \"port_of_loading\": \"\", \"destination_name\": \"Alba Coast Winery - EQW\", \"destination_city\": \"PAICINES\", \"destination_state\": \"CA\", \"destination_country\": \"USA\", \"destination_country_code\": \"\", \"destination_address\": \"385 Panoche Road\", \"destination_province\": \"\", \"destination_region\": \"\", \"port_of_discharge\": \"\", \"shipment_weight\": 0.0, \"shipment_volume\": 0.0, \"shipment_total_value\": 844.75, \"shipment_creation_date\": \"2026-06-18T12:00:00.000Z\", \"container\": [], \"charges\": [{\"charge_name\": \"Base Freight\", \"charge_gross_amount\": 545.0, \"charge_code\": \"Base Freight\", \"currency\": \"USD\", \"tariff_rate\": 545.0, \"tariff_qty\": 1.0, \"tariff_uom\": \"Flat\", \"tariff_description\": \"\"}, {\"charge_name\": \"Fuel Surcharge\", \"charge_gross_amount\": 299.75, \"charge_code\": \"Fuel Surcharge\", \"currency\": \"USD\", \"tariff_rate\": 55.0, \"tariff_qty\": 545.0, \"tariff_uom\": \"\", \"tariff_description\": \"\"}], \"source_code\": \"na\", \"destination_code\": \"na\"}, {\"shipment_number\": \"0377796\", \"consignee_name\": \"\", \"shipment_tracking_number\": \"\", \"stopover_location\": \"\", \"dangerous_goods_indicator\": false, \"thu_type\": \"van\", \"thu_name\": \"van\", \"service_level\": \"\", \"number_of_pallets\": 0.0, \"custom\": {\"delivery_type\": \"\", \"freight_provider\": \"\", \"material_category\": \"Materials\"}, \"pro_number\": \"\", \"mode\": \"ROAD\", \"source_name\": \"Delicato\", \"source_city\": \"Manteca\", \"source_state\": \"CA\", \"source_country\": \"US\", \"source_country_code\": \"\", \"source_address\": \"12001 S HWY 99\", \"source_province\": \"\", \"source_region\": \"\", \"port_of_loading\": \"\", \"destination_name\": \"Gallo\", \"destination_city\": \"MODESTO\", \"destination_state\": \"CA\", \"destination_country\": \"US\", \"destination_country_code\": \"\", \"destination_address\": \"2640 Yosemite Blvd\", \"destination_province\": \"\", \"destination_region\": \"\", \"port_of_discharge\": \"\", \"shipment_weight\": 0.0, \"shipment_volume\": 0.0, \"shipment_total_value\": 402.8, \"shipment_creation_date\": \"2026-06-22T12:00:00.000Z\", \"container\": [], \"charges\": [{\"charge_name\": \"Base Freight\", \"charge_gross_amount\": 265.0, \"charge_code\": \"Base Freight\", \"currency\": \"USD\", \"tariff_rate\": 265.0, \"tariff_qty\": 1.0, \"tariff_uom\": \"Flat\", \"tariff_description\": \"\"}, {\"charge_name\": \"Fuel Surcharge\", \"charge_gross_amount\": 137.8, \"charge_code\": \"Fuel Surcharge\", \"currency\": \"USD\", \"tariff_rate\": 52.0, \"tariff_qty\": 265.0, \"tariff_uom\": \"\", \"tariff_description\": \"\"}], \"source_code\": \"na\", \"destination_code\": \"na\"}, {\"shipment_number\": \"0378642\", \"consignee_name\": \"\", \"shipment_tracking_number\": \"\", \"stopover_location\": \"\", \"dangerous_goods_indicator\": false, \"thu_type\": \"van\", \"thu_name\": \"van\", \"service_level\": \"\", \"number_of_pallets\": 0.0, \"custom\": {\"delivery_type\": \"\", \"freight_provider\": \"\", \"material_category\": \"Materials\"}, \"pro_number\": \"\", \"mode\": \"ROAD\", \"source_name\": \"Scholle\", \"source_city\": \"Merced\", \"source_state\": \"CA\", \"source_country\": \"US\", \"source_country_code\": \"\", \"source_address\": \"2500 Cooper Ave\", \"source_province\": \"\", \"source_region\": \"\", \"port_of_loading\": \"\", \"destination_name\": \"Delicato\", \"destination_city\": \"Manteca\", \"destination_state\": \"CA\", \"destination_country\": \"US\", \"destination_country_code\": \"\", \"destination_address\": \"12001 S Hwy 99\", \"destination_province\": \"\", \"destination_region\": \"\", \"port_of_discharge\": \"\", \"shipment_weight\": 0.0, \"shipment_volume\": 0.0, \"shipment_total_value\": 554.8, \"shipment_creation_date\": \"2026-06-25T12:00:00.000Z\", \"container\": [], \"charges\": [{\"charge_name\": \"Base Freight\", \"charge_gross_amount\": 365.0, \"charge_code\": \"Base Freight\", \"currency\": \"USD\", \"tariff_rate\": 365.0, \"tariff_qty\": 1.0, \"tariff_uom\": \"Flat\", \"tariff_description\": \"\"}, {\"charge_name\": \"Fuel Surcharge\", \"charge_gross_amount\": 189.8, \"charge_code\": \"Fuel Surcharge\", \"currency\": \"USD\", \"tariff_rate\": 52.0, \"tariff_qty\": 365.0, \"tariff_uom\": \"\", \"tariff_description\": \"\"}], \"source_code\": \"na\", \"destination_code\": \"na\"}, {\"shipment_number\": \"0378710\", \"consignee_name\": \"\", \"shipment_tracking_number\": \"\", \"stopover_location\": \"\", \"dangerous_goods_indicator\": false, \"thu_type\": \"van\", \"thu_name\": \"van\", \"service_level\": \"\", \"number_of_pallets\": 0.0, \"custom\": {\"delivery_type\": \"\", \"freight_provider\": \"\", \"material_category\": \"Materials\"}, \"pro_number\": \"\", \"mode\": \"ROAD\", \"source_name\": \"Delicato\", \"source_city\": \"Manteca\", \"source_state\": \"CA\", \"source_country\": \"US\", \"source_country_code\": \"\", \"source_address\": \"12001 South Highway 99\", \"source_province\": \"\", \"source_region\": \"\", \"port_of_loading\": \"\", \"destination_name\": \"Francis Coppola\", \"destination_city\": \"Geyserville\", \"destination_state\": \"CA\", \"destination_country\": \"US\", \"destination_country_code\": \"\", \"destination_address\": \"300 Via Archimedes\", \"destination_province\": \"\", \"destination_region\": \"\", \"port_of_discharge\": \"\", \"shipment_weight\": 0.0, \"shipment_volume\": 0.0, \"shipment_total_value\": 904.4, \"shipment_creation_date\": \"2026-06-26T12:00:00.000Z\", \"container\": [], \"charges\": [{\"charge_name\": \"Base Freight\", \"charge_gross_amount\": 595.0, \"charge_code\": \"Base Freight\", \"currency\": \"USD\", \"tariff_rate\": 595.0, \"tariff_qty\": 1.0, \"tariff_uom\": \"Flat\", \"tariff_description\": \"\"}, {\"charge_name\": \"Fuel Surcharge\", \"charge_gross_amount\": 309.4, \"charge_code\": \"Fuel Surcharge\", \"currency\": \"USD\", \"tariff_rate\": 52.0, \"tariff_qty\": 595.0, \"tariff_uom\": \"\", \"tariff_description\": \"\"}], \"source_code\": \"na\", \"destination_code\": \"na\"}, {\"shipment_number\": \"0378711\", \"consignee_name\": \"\", \"shipment_tracking_number\": \"\", \"stopover_location\": \"\", \"dangerous_goods_indicator\": false, \"thu_type\": \"van\", \"thu_name\": \"van\", \"service_level\": \"\", \"number_of_pallets\": 0.0, \"custom\": {\"delivery_type\": \"\", \"freight_provider\": \"\", \"material_category\": \"Materials\"}, \"pro_number\": \"\", \"mode\": \"ROAD\", \"source_name\": \"Delicato\", \"source_city\": \"Manteca\", \"source_state\": \"CA\", \"source_country\": \"US\", \"source_country_code\": \"\", \"source_address\": \"12001 South Highway 99\", \"source_province\": \"\", \"source_region\": \"\", \"port_of_loading\": \"\", \"destination_name\": \"Wine Shipping\", \"destination_city\": \"Napa\", \"destination_state\": \"CA\", \"destination_country\": \"US\", \"destination_country_code\": \"\", \"destination_address\": \"50 Technology Court\", \"destination_province\": \"\", \"destination_region\": \"\", \"port_of_discharge\": \"\", \"shipment_weight\": 0.0, \"shipment_volume\": 0.0, \"shipment_total_value\": 623.2, \"shipment_creation_date\": \"2026-06-26T12:00:00.000Z\", \"container\": [], \"charges\": [{\"charge_name\": \"Base Freight\", \"charge_gross_amount\": 410.0, \"charge_code\": \"Base Freight\", \"currency\": \"USD\", \"tariff_rate\": 410.0, \"tariff_qty\": 1.0, \"tariff_uom\": \"Flat\", \"tariff_description\": \"\"}, {\"charge_name\": \"Fuel Surcharge\", \"charge_gross_amount\": 213.2, \"charge_code\": \"Fuel Surcharge\", \"currency\": \"USD\", \"tariff_rate\": 52.0, \"tariff_qty\": 410.0, \"tariff_uom\": \"\", \"tariff_description\": \"\"}], \"source_code\": \"na\", \"destination_code\": \"na\"}, {\"shipment_number\": \"0379136\", \"consignee_name\": \"\", \"shipment_tracking_number\": \"\", \"stopover_location\": \"\", \"dangerous_goods_indicator\": false, \"thu_type\": \"van\", \"thu_name\": \"van\", \"service_level\": \"\", \"number_of_pallets\": 0.0, \"custom\": {\"delivery_type\": \"\", \"freight_provider\": \"\", \"material_category\": \"Materials\"}, \"pro_number\": \"\", \"mode\": \"ROAD\", \"source_name\": \"Scholle\", \"source_city\": \"Merced\", \"source_state\": \"CA\", \"source_country\": \"US\", \"source_country_code\": \"\", \"source_address\": \"2500 Cooper Ave\", \"source_province\": \"\", \"source_region\": \"\", \"port_of_loading\": \"\", \"destination_name\": \"Delicato\", \"destination_city\": \"Manteca\", \"destination_state\": \"CA\", \"destination_country\": \"US\", \"destination_country_code\": \"\", \"destination_address\": \"12001 S Hwy 99\", \"destination_province\": \"\", \"destination_region\": \"\", \"port_of_discharge\": \"\", \"shipment_weight\": 0.0, \"shipment_volume\": 0.0, \"shipment_total_value\": 543.85, \"shipment_creation_date\": \"2026-06-29T12:00:00.000Z\", \"container\": [], \"charges\": [{\"charge_name\": \"Base Freight\", \"charge_gross_amount\": 365.0, \"charge_code\": \"Base Freight\", \"currency\": \"USD\", \"tariff_rate\": 365.0, \"tariff_qty\": 1.0, \"tariff_uom\": \"Flat\", \"tariff_description\": \"\"}, {\"charge_name\": \"Fuel Surcharge\", \"charge_gross_amount\": 178.85, \"charge_code\": \"Fuel Surcharge\", \"currency\": \"USD\", \"tariff_rate\": 49.0, \"tariff_qty\": 365.0, \"tariff_uom\": \"\", \"tariff_description\": \"\"}], \"source_code\": \"na\", \"destination_code\": \"na\"}, {\"shipment_number\": \"0379143\", \"consignee_name\": \"\", \"shipment_tracking_number\": \"\", \"stopover_location\": \"\", \"dangerous_goods_indicator\": false, \"thu_type\": \"van\", \"thu_name\": \"van\", \"service_level\": \"\", \"number_of_pallets\": 0.0, \"custom\": {\"delivery_type\": \"\", \"freight_provider\": \"\", \"material_category\": \"Cased Wine\"}, \"pro_number\": \"\", \"mode\": \"ROAD\", \"source_name\": \"Oakland Pallets Ardagh\", \"source_city\": \"Benicia\", \"source_state\": \"CA\", \"source_country\": \"US\", \"source_country_code\": \"\", \"source_address\": \"65550 Good Year rd.\", \"source_province\": \"\", \"source_region\": \"\", \"port_of_loading\": \"\", \"destination_name\": \"Delicato\", \"destination_city\": \"Manteca\", \"destination_state\": \"CA\", \"destination_country\": \"US\", \"destination_country_code\": \"\", \"destination_address\": \"12001 S. HWY 99, Dock 307\", \"destination_province\": \"\", \"destination_region\": \"\", \"port_of_discharge\": \"\", \"shipment_weight\": 0.0, \"shipment_volume\": 0.0, \"shipment_total_value\": 603.45, \"shipment_creation_date\": \"2026-06-30T12:00:00.000Z\", \"container\": [], \"charges\": [{\"charge_name\": \"Base Freight\", \"charge_gross_amount\": 405.0, \"charge_code\": \"Base Freight\", \"currency\": \"USD\", \"tariff_rate\": 405.0, \"tariff_qty\": 1.0, \"tariff_uom\": \"Flat\", \"tariff_description\": \"\"}, {\"charge_name\": \"Fuel Surcharge\", \"charge_gross_amount\": 198.45, \"charge_code\": \"Fuel Surcharge\", \"currency\": \"USD\", \"tariff_rate\": 49.0, \"tariff_qty\": 405.0, \"tariff_uom\": \"\", \"tariff_description\": \"\"}], \"source_code\": \"na\", \"destination_code\": \"na\"}]}]}"
+    },
+    "api_response": {
+      "M": {
+        "body": {
+          "S": "{\"status\":\"Request Accepted\"}"
+        },
+        "status_code": {
+          "N": "200"
+        },
+        "success": {
+          "BOOL": true
+        },
+        "timestamp": {
+          "S": "2026-09-17T08:49:17.565060"
+        }
+      }
+    },
+    "attachment_id": {
+      "S": "3da64b3c-0578-4b18-8294-44b5dbb4c0c5"
+    },
+    "carrier_name": {
+      "S": "Yandell Truckaway, Inc."
+    },
+    "completed_at": {
+      "N": "1789634957902"
+    },
+    "completed_at_iso": {
+      "S": "2026-09-17T08:49:17.902219"
+    },
+    "confidence_score": {
+      "N": "0.99"
+    },
+    "created_at": {
+      "N": "1789634382"
+    },
+    "created_at_iso": {
+      "S": "2026-09-17T08:39:42.619812"
+    },
+    "email_id": {
+      "S": "1ed642jmink4t4mvm39hrlj8fuf048rd1lhv3jo1"
+    },
+    "extracted_fields": {
+      "L": [
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No 'Credit' keyword found in document header or body; this is a standard freight invoice."
+            },
+            "field_name": {
+              "S": "is_credit_memo"
+            },
+            "value": {
+              "S": "False"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "Extracted from header label 'Invoice number:29669'."
+            },
+            "field_name": {
+              "S": "invoice_number"
+            },
+            "value": {
+              "S": "29669"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "Extracted from header label 'Bill date: 07/06/2026' and converted to ISO format."
+            },
+            "field_name": {
+              "S": "invoice_date"
+            },
+            "value": {
+              "S": "2026-07-06"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "Always left blank per instructions."
+            },
+            "field_name": {
+              "S": "vendor_reference_id"
+            },
+            "value": {
+              "S": ""
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "Extracted from footer label 'Due date: 08/05/2026' and converted to ISO format."
+            },
+            "field_name": {
+              "S": "payment_due_date"
+            },
+            "value": {
+              "S": "2026-08-05"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "0.9"
+            },
+            "explanation": {
+              "S": "No single BOL number labeled at invoice header level; multiple BOL numbers appear in the line-item table but not as a header-level field."
+            },
+            "field_name": {
+              "S": "bill_of_lading_number"
+            },
+            "value": {
+              "S": ""
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No bill of entry number found on this road carrier invoice."
+            },
+            "field_name": {
+              "S": "bill_of_entry_number"
+            },
+            "value": {
+              "S": ""
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "Yandell Truckaway invoices are exclusively USD; amounts shown with $ symbol confirm USD."
+            },
+            "field_name": {
+              "S": "currency"
+            },
+            "value": {
+              "S": "USD"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "Extracted from footer label 'Total invoice amount: $4,477.25'."
+            },
+            "field_name": {
+              "S": "total_invoice_value"
+            },
+            "value": {
+              "S": "4477.25"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "0.85"
+            },
+            "explanation": {
+              "S": "Inferred from due date 08/05/2026 being 30 days after invoice date 07/06/2026; no explicit payment terms text printed."
+            },
+            "field_name": {
+              "S": "payment_terms"
+            },
+            "value": {
+              "S": "Net 30"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No assessable value field found on this invoice."
+            },
+            "field_name": {
+              "S": "assessable_value"
+            },
+            "value": {
+              "S": ""
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No explicit net/subtotal field found; only grand total is printed."
+            },
+            "field_name": {
+              "S": "net_invoice_value"
+            },
+            "value": {
+              "S": ""
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No rounding adjustment field found on this invoice."
+            },
+            "field_name": {
+              "S": "round_off"
+            },
+            "value": {
+              "S": ""
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No rate applicability date field found on this invoice."
+            },
+            "field_name": {
+              "S": "rate_applicability_date"
+            },
+            "value": {
+              "S": ""
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No single arrival date at invoice header level; delivery dates are per-shipment in the table."
+            },
+            "field_name": {
+              "S": "arrival_date"
+            },
+            "value": {
+              "S": ""
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No departure date at invoice header level; pickup dates not printed."
+            },
+            "field_name": {
+              "S": "departure_date"
+            },
+            "value": {
+              "S": ""
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "Yandell Truckaway is a road carrier; no airway bill number applicable."
+            },
+            "field_name": {
+              "S": "airway_bill_number"
+            },
+            "value": {
+              "S": ""
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No HSN code found on this invoice."
+            },
+            "field_name": {
+              "S": "hsn_number"
+            },
+            "value": {
+              "S": ""
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "Extracted from 'Bill to: Delicato Vineyards' in the header."
+            },
+            "field_name": {
+              "S": "bill_to_name"
+            },
+            "value": {
+              "S": "Delicato Vineyards"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "Extracted from bill-to block: '12001 So. Hwy. 99 MANTECA, CA 95336'."
+            },
+            "field_name": {
+              "S": "bill_to_address"
+            },
+            "value": {
+              "S": "12001 So. Hwy. 99, MANTECA, CA 95336"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "0.95"
+            },
+            "explanation": {
+              "S": "Extracted from PO No. column: row 5 has '141008', row 7 has 'BENICIA4434'. Other rows have no PO values."
+            },
+            "field_name": {
+              "S": "po_number"
+            },
+            "value": {
+              "S": "['141008', 'BENICIA4434']"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "0.9"
+            },
+            "explanation": {
+              "S": "Extracted valid BOL identifiers from BOL column. Excluded 'bins 6/29/26' as it is a commodity description with date, not a BOL number."
+            },
+            "field_name": {
+              "S": "bol_number"
+            },
+            "value": {
+              "S": "['8-227479', '8-227476', '105350', '06252026', '80227871', '226567', '8-227773', '379143']"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "Extracted all values from the Order column in the line-item table."
+            },
+            "field_name": {
+              "S": "order_number"
+            },
+            "value": {
+              "S": "['0377638', '0377796', '0378642', '0378710', '0378711', '0379136', '0379143']"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No tractor or trailer numbers found on this invoice."
+            },
+            "field_name": {
+              "S": "tractor_trailer_number"
+            },
+            "value": {
+              "S": "[]"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No load number field found on this invoice."
+            },
+            "field_name": {
+              "S": "load_number"
+            },
+            "value": {
+              "S": ""
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No supporting documents referenced on this invoice page."
+            },
+            "field_name": {
+              "S": "documents_attachment"
+            },
+            "value": {
+              "S": "[]"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No additional header-level custom fields found beyond standard mapped fields."
+            },
+            "field_name": {
+              "S": "custom_fields"
+            },
+            "value": {
+              "S": "{'value': [], 'explanation': 'No additional header-level custom fields found beyond standard mapped fields.', 'confidence': 1.0}"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "No invoice-level extra fields to capture."
+            },
+            "field_name": {
+              "S": "custom"
+            },
+            "value": {
+              "S": "{'value': {}, 'explanation': 'No invoice-level extra fields to capture.', 'confidence': 1.0}"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "Extracted 7 shipments from the invoice line-item table, one for each order number."
+            },
+            "field_name": {
+              "S": "shipments"
+            },
+            "value": {
+              "S": "[{'shipment_number': {'value': '0377638', 'explanation': 'Extracted from Order column, row 1.', 'confidence': 1.0}, 'consignee_name': {'value': None, 'explanation': 'No consignee name printed on this freight invoice.', 'confidence': 1.0}, 'shipment_tracking_number': {'value': None, 'explanation': 'No explicit tracking number labeled for this shipment.', 'confidence': 1.0}, 'stopover_location': {'value': None, 'explanation': 'No stopover location mentioned for this shipment.', 'confidence': 1.0}, 'dangerous_goods_indicator': {'value': None, 'explanation': 'No dangerous goods indicator found for this shipment.', 'confidence': 1.0}, 'thu_type': {'value': None, 'explanation': 'No handling unit type code found for this shipment.', 'confidence': 1.0}, 'thu_name': {'value': None, 'explanation': 'No handling unit name found for this shipment.', 'confidence': 1.0}, 'service_level': {'value': None, 'explanation': 'No service level descriptor found for this shipment.', 'confidence': 1.0}, 'number_of_pallets': {'value': None, 'explanation': 'No pallet count found for this shipment.', 'confidence': 1.0}, 'custom': {'value': {'value': {}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'pro_number': {'value': None, 'explanation': 'No PRO number labeled for this shipment.', 'confidence': 1.0}, 'mode': {'value': 'ROAD', 'explanation': 'Yandell Truckaway is a road carrier; charges include Flat rate and Fuel Surcharge consistent with truck transport.', 'confidence': 1.0}, 'source_name': {'value': '', 'explanation': 'No shipper/consignor name found on this freight invoice; no attached BOL available.', 'confidence': 0.9}, 'source_city': {'value': None, 'explanation': 'No origin city found on this freight invoice.', 'confidence': 0.9}, 'source_state': {'value': None, 'explanation': 'No origin state found on this freight invoice.', 'confidence': 0.9}, 'source_country': {'value': None, 'explanation': 'No origin country found on this freight invoice.', 'confidence': 0.9}, 'source_country_code': {'value': None, 'explanation': 'No origin country code found on this freight invoice.', 'confidence': 1.0}, 'source_address': {'value': None, 'explanation': 'No origin address found on this freight invoice.', 'confidence': 0.9}, 'source_province': {'value': None, 'explanation': 'No origin province found on this freight invoice.', 'confidence': 1.0}, 'source_region': {'value': None, 'explanation': 'No origin region found on this freight invoice.', 'confidence': 1.0}, 'port_of_loading': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'destination_name': {'value': None, 'explanation': 'No consignee/destination name found on this freight invoice.', 'confidence': 0.9}, 'destination_city': {'value': None, 'explanation': 'No destination city found on this freight invoice.', 'confidence': 0.9}, 'destination_state': {'value': None, 'explanation': 'No destination state found on this freight invoice.', 'confidence': 0.9}, 'destination_country': {'value': None, 'explanation': 'No destination country found on this freight invoice.', 'confidence': 0.9}, 'destination_country_code': {'value': None, 'explanation': 'No destination country code found on this freight invoice.', 'confidence': 1.0}, 'destination_address': {'value': None, 'explanation': 'No destination address found on this freight invoice.', 'confidence': 0.9}, 'destination_province': {'value': None, 'explanation': 'No destination province found on this freight invoice.', 'confidence': 1.0}, 'destination_region': {'value': None, 'explanation': 'No destination region found on this freight invoice.', 'confidence': 1.0}, 'port_of_discharge': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'shipment_weight': {'value': None, 'explanation': 'No shipment weight found for this shipment.', 'confidence': 1.0}, 'shipment_volume': {'value': None, 'explanation': 'No shipment volume found for this shipment.', 'confidence': 1.0}, 'shipment_total_value': {'value': 844.75, 'explanation': 'Extracted from Amount column subtotal for order 0377638: $844.75.', 'confidence': 1.0}, 'shipment_creation_date': {'value': '2026-06-18', 'explanation': 'Extracted from Delivery date column for order 0377638: 06/18/2026.', 'confidence': 0.9}, 'material_category': {'value': 'Unclassifiable', 'explanation': 'No commodity description found on freight invoice. BOL column contains reference numbers only (8-227479/8-227476). PO column is empty. Charge names are Flat rate and Fuel Surcharge (not commodity signals). No equipment type, unit type, or other classification signals present. Classified as Unclassifiable pending BOL review.', 'confidence': 0.95}, 'container': {'value': [], 'explanation': 'No container identifiers found for this shipment.', 'confidence': 1.0}, 'charges': {'value': [{'charge_name': {'value': 'Flat rate', 'explanation': 'Extracted from Rate method column, row 1.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 545.0, 'explanation': 'Extracted from Amount column, row 1: $545.00.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 545.0, 'explanation': 'Extracted from Rate column, row 1: 545.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 1.0, 'explanation': 'Extracted from Units column, row 1: 1.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': 'Flat', 'explanation': 'Extracted from Rate method column: Flat rate.', 'confidence': 1.0}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}, {'charge_name': {'value': 'Fuel Surcharge', 'explanation': 'Extracted from PO No. column (used for charge description), row 2.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 299.75, 'explanation': 'Extracted from Amount column, row 2: 299.75.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 55.0, 'explanation': 'Extracted from Rate column, row 2: 55.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 545.0, 'explanation': 'Extracted from Units column, row 2: 545.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': None, 'explanation': 'No UOM specified for Fuel Surcharge line.', 'confidence': 1.0}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}], 'explanation': 'Extracted two charge lines for shipment 0377638: Flat rate and Fuel Surcharge.', 'confidence': 1.0}}, {'shipment_number': {'value': '0377796', 'explanation': 'Extracted from Order column, row 4.', 'confidence': 1.0}, 'consignee_name': {'value': None, 'explanation': 'No consignee name printed on this freight invoice.', 'confidence': 1.0}, 'shipment_tracking_number': {'value': None, 'explanation': 'No explicit tracking number labeled for this shipment.', 'confidence': 1.0}, 'stopover_location': {'value': None, 'explanation': 'No stopover location mentioned for this shipment.', 'confidence': 1.0}, 'dangerous_goods_indicator': {'value': None, 'explanation': 'No dangerous goods indicator found for this shipment.', 'confidence': 1.0}, 'thu_type': {'value': None, 'explanation': 'No handling unit type code found for this shipment.', 'confidence': 1.0}, 'thu_name': {'value': None, 'explanation': 'No handling unit name found for this shipment.', 'confidence': 1.0}, 'service_level': {'value': None, 'explanation': 'No service level descriptor found for this shipment.', 'confidence': 1.0}, 'number_of_pallets': {'value': None, 'explanation': 'No pallet count found for this shipment.', 'confidence': 1.0}, 'custom': {'value': {'value': {}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'pro_number': {'value': None, 'explanation': 'No PRO number labeled for this shipment.', 'confidence': 1.0}, 'mode': {'value': 'ROAD', 'explanation': 'Yandell Truckaway is a road carrier; charges include Flat rate and Fuel Surcharge consistent with truck transport.', 'confidence': 1.0}, 'source_name': {'value': '', 'explanation': 'No shipper/consignor name found on this freight invoice; no attached BOL available.', 'confidence': 0.9}, 'source_city': {'value': None, 'explanation': 'No origin city found on this freight invoice.', 'confidence': 0.9}, 'source_state': {'value': None, 'explanation': 'No origin state found on this freight invoice.', 'confidence': 0.9}, 'source_country': {'value': None, 'explanation': 'No origin country found on this freight invoice.', 'confidence': 0.9}, 'source_country_code': {'value': None, 'explanation': 'No origin country code found on this freight invoice.', 'confidence': 1.0}, 'source_address': {'value': None, 'explanation': 'No origin address found on this freight invoice.', 'confidence': 0.9}, 'source_province': {'value': None, 'explanation': 'No origin province found on this freight invoice.', 'confidence': 1.0}, 'source_region': {'value': None, 'explanation': 'No origin region found on this freight invoice.', 'confidence': 1.0}, 'port_of_loading': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'destination_name': {'value': None, 'explanation': 'No consignee/destination name found on this freight invoice.', 'confidence': 0.9}, 'destination_city': {'value': None, 'explanation': 'No destination city found on this freight invoice.', 'confidence': 0.9}, 'destination_state': {'value': None, 'explanation': 'No destination state found on this freight invoice.', 'confidence': 0.9}, 'destination_country': {'value': None, 'explanation': 'No destination country found on this freight invoice.', 'confidence': 0.9}, 'destination_country_code': {'value': None, 'explanation': 'No destination country code found on this freight invoice.', 'confidence': 1.0}, 'destination_address': {'value': None, 'explanation': 'No destination address found on this freight invoice.', 'confidence': 0.9}, 'destination_province': {'value': None, 'explanation': 'No destination province found on this freight invoice.', 'confidence': 1.0}, 'destination_region': {'value': None, 'explanation': 'No destination region found on this freight invoice.', 'confidence': 1.0}, 'port_of_discharge': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'shipment_weight': {'value': None, 'explanation': 'No shipment weight found for this shipment.', 'confidence': 1.0}, 'shipment_volume': {'value': None, 'explanation': 'No shipment volume found for this shipment.', 'confidence': 1.0}, 'shipment_total_value': {'value': 402.8, 'explanation': 'Extracted from Amount column subtotal for order 0377796: $402.80.', 'confidence': 1.0}, 'shipment_creation_date': {'value': '2026-06-22', 'explanation': 'Extracted from Delivery date column for order 0377796: 06/22/2026.', 'confidence': 0.9}, 'material_category': {'value': 'Unclassifiable', 'explanation': 'No commodity description found on freight invoice. BOL column contains reference number 105350 only. PO column is empty. Charge names are Flat rate and Fuel Surcharge (not commodity signals). No equipment type, unit type, or other classification signals present. Classified as Unclassifiable pending BOL review.', 'confidence': 0.95}, 'container': {'value': [], 'explanation': 'No container identifiers found for this shipment.', 'confidence': 1.0}, 'charges': {'value': [{'charge_name': {'value': 'Flat rate', 'explanation': 'Extracted from Rate method column, row 4.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 265.0, 'explanation': 'Extracted from Amount column, row 4: $265.00.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 265.0, 'explanation': 'Extracted from Rate column, row 4: 265.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 1.0, 'explanation': 'Extracted from Units column, row 4: 1.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': 'Flat', 'explanation': 'Extracted from Rate method column: Flat rate.', 'confidence': 1.0}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}, {'charge_name': {'value': 'Fuel Surcharge', 'explanation': 'Extracted from PO No. column (used for charge description), row 5.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 137.8, 'explanation': 'Extracted from Amount column, row 5: 137.80.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 52.0, 'explanation': 'Extracted from Rate column, row 5: 52.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 265.0, 'explanation': 'Extracted from Units column, row 5: 265.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': None, 'explanation': 'No UOM specified for Fuel Surcharge line.', 'confidence': 1.0}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}], 'explanation': 'Extracted two charge lines for shipment 0377796: Flat rate and Fuel Surcharge.', 'confidence': 1.0}}, {'shipment_number': {'value': '0378642', 'explanation': 'Extracted from Order column, row 7.', 'confidence': 1.0}, 'consignee_name': {'value': None, 'explanation': 'No consignee name printed on this freight invoice.', 'confidence': 1.0}, 'shipment_tracking_number': {'value': None, 'explanation': 'No explicit tracking number labeled for this shipment.', 'confidence': 1.0}, 'stopover_location': {'value': None, 'explanation': 'No stopover location mentioned for this shipment.', 'confidence': 1.0}, 'dangerous_goods_indicator': {'value': None, 'explanation': 'No dangerous goods indicator found for this shipment.', 'confidence': 1.0}, 'thu_type': {'value': None, 'explanation': 'No handling unit type code found for this shipment.', 'confidence': 1.0}, 'thu_name': {'value': None, 'explanation': 'No handling unit name found for this shipment.', 'confidence': 1.0}, 'service_level': {'value': None, 'explanation': 'No service level descriptor found for this shipment.', 'confidence': 1.0}, 'number_of_pallets': {'value': None, 'explanation': 'No pallet count found for this shipment.', 'confidence': 1.0}, 'custom': {'value': {'value': {}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'pro_number': {'value': None, 'explanation': 'No PRO number labeled for this shipment.', 'confidence': 1.0}, 'mode': {'value': 'ROAD', 'explanation': 'Yandell Truckaway is a road carrier; charges include Flat rate and Fuel Surcharge consistent with truck transport.', 'confidence': 1.0}, 'source_name': {'value': '', 'explanation': 'No shipper/consignor name found on this freight invoice; no attached BOL available.', 'confidence': 0.9}, 'source_city': {'value': None, 'explanation': 'No origin city found on this freight invoice.', 'confidence': 0.9}, 'source_state': {'value': None, 'explanation': 'No origin state found on this freight invoice.', 'confidence': 0.9}, 'source_country': {'value': None, 'explanation': 'No origin country found on this freight invoice.', 'confidence': 0.9}, 'source_country_code': {'value': None, 'explanation': 'No origin country code found on this freight invoice.', 'confidence': 1.0}, 'source_address': {'value': None, 'explanation': 'No origin address found on this freight invoice.', 'confidence': 0.9}, 'source_province': {'value': None, 'explanation': 'No origin province found on this freight invoice.', 'confidence': 1.0}, 'source_region': {'value': None, 'explanation': 'No origin region found on this freight invoice.', 'confidence': 1.0}, 'port_of_loading': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'destination_name': {'value': None, 'explanation': 'No consignee/destination name found on this freight invoice.', 'confidence': 0.9}, 'destination_city': {'value': None, 'explanation': 'No destination city found on this freight invoice.', 'confidence': 0.9}, 'destination_state': {'value': None, 'explanation': 'No destination state found on this freight invoice.', 'confidence': 0.9}, 'destination_country': {'value': None, 'explanation': 'No destination country found on this freight invoice.', 'confidence': 0.9}, 'destination_country_code': {'value': None, 'explanation': 'No destination country code found on this freight invoice.', 'confidence': 1.0}, 'destination_address': {'value': None, 'explanation': 'No destination address found on this freight invoice.', 'confidence': 0.9}, 'destination_province': {'value': None, 'explanation': 'No destination province found on this freight invoice.', 'confidence': 1.0}, 'destination_region': {'value': None, 'explanation': 'No destination region found on this freight invoice.', 'confidence': 1.0}, 'port_of_discharge': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'shipment_weight': {'value': None, 'explanation': 'No shipment weight found for this shipment.', 'confidence': 1.0}, 'shipment_volume': {'value': None, 'explanation': 'No shipment volume found for this shipment.', 'confidence': 1.0}, 'shipment_total_value': {'value': 554.8, 'explanation': 'Extracted from Amount column subtotal for order 0378642: $554.80.', 'confidence': 1.0}, 'shipment_creation_date': {'value': '2026-06-25', 'explanation': 'Extracted from Delivery date column for order 0378642: 06/25/2026.', 'confidence': 0.9}, 'material_category': {'value': 'Unclassifiable', 'explanation': 'No commodity description found on freight invoice. BOL column contains reference number 06252026 only. PO column is empty. Charge names are Flat rate and Fuel Surcharge (not commodity signals). No equipment type, unit type, or other classification signals present. Classified as Unclassifiable pending BOL review.', 'confidence': 0.95}, 'container': {'value': [], 'explanation': 'No container identifiers found for this shipment.', 'confidence': 1.0}, 'charges': {'value': [{'charge_name': {'value': 'Flat rate', 'explanation': 'Extracted from Rate method column, row 7.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 365.0, 'explanation': 'Extracted from Amount column, row 7: $365.00.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 365.0, 'explanation': 'Extracted from Rate column, row 7: 365.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 1.0, 'explanation': 'Extracted from Units column, row 7: 1.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': 'Flat', 'explanation': 'Extracted from Rate method column: Flat rate.', 'confidence': 1.0}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}, {'charge_name': {'value': 'Fuel Surcharge', 'explanation': 'Extracted from PO No. column (used for charge description), row 8.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 189.8, 'explanation': 'Extracted from Amount column, row 8: 189.80.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 52.0, 'explanation': 'Extracted from Rate column, row 8: 52.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 365.0, 'explanation': 'Extracted from Units column, row 8: 365.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': None, 'explanation': 'No UOM specified for Fuel Surcharge line.', 'confidence': 1.0}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}], 'explanation': 'Extracted two charge lines for shipment 0378642: Flat rate and Fuel Surcharge.', 'confidence': 1.0}}, {'shipment_number': {'value': '0378710', 'explanation': 'Extracted from Order column, row 10.', 'confidence': 1.0}, 'consignee_name': {'value': None, 'explanation': 'No consignee name printed on this freight invoice.', 'confidence': 1.0}, 'shipment_tracking_number': {'value': None, 'explanation': 'No explicit tracking number labeled for this shipment.', 'confidence': 1.0}, 'stopover_location': {'value': None, 'explanation': 'No stopover location mentioned for this shipment.', 'confidence': 1.0}, 'dangerous_goods_indicator': {'value': None, 'explanation': 'No dangerous goods indicator found for this shipment.', 'confidence': 1.0}, 'thu_type': {'value': None, 'explanation': 'No handling unit type code found for this shipment.', 'confidence': 1.0}, 'thu_name': {'value': None, 'explanation': 'No handling unit name found for this shipment.', 'confidence': 1.0}, 'service_level': {'value': None, 'explanation': 'No service level descriptor found for this shipment.', 'confidence': 1.0}, 'number_of_pallets': {'value': None, 'explanation': 'No pallet count found for this shipment.', 'confidence': 1.0}, 'custom': {'value': {'value': {}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'pro_number': {'value': None, 'explanation': 'No PRO number labeled for this shipment.', 'confidence': 1.0}, 'mode': {'value': 'ROAD', 'explanation': 'Yandell Truckaway is a road carrier; charges include Flat rate and Fuel Surcharge consistent with truck transport.', 'confidence': 1.0}, 'source_name': {'value': '', 'explanation': 'No shipper/consignor name found on this freight invoice; no attached BOL available.', 'confidence': 0.9}, 'source_city': {'value': None, 'explanation': 'No origin city found on this freight invoice.', 'confidence': 0.9}, 'source_state': {'value': None, 'explanation': 'No origin state found on this freight invoice.', 'confidence': 0.9}, 'source_country': {'value': None, 'explanation': 'No origin country found on this freight invoice.', 'confidence': 0.9}, 'source_country_code': {'value': None, 'explanation': 'No origin country code found on this freight invoice.', 'confidence': 1.0}, 'source_address': {'value': None, 'explanation': 'No origin address found on this freight invoice.', 'confidence': 0.9}, 'source_province': {'value': None, 'explanation': 'No origin province found on this freight invoice.', 'confidence': 1.0}, 'source_region': {'value': None, 'explanation': 'No origin region found on this freight invoice.', 'confidence': 1.0}, 'port_of_loading': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'destination_name': {'value': None, 'explanation': 'No consignee/destination name found on this freight invoice.', 'confidence': 0.9}, 'destination_city': {'value': None, 'explanation': 'No destination city found on this freight invoice.', 'confidence': 0.9}, 'destination_state': {'value': None, 'explanation': 'No destination state found on this freight invoice.', 'confidence': 0.9}, 'destination_country': {'value': None, 'explanation': 'No destination country found on this freight invoice.', 'confidence': 0.9}, 'destination_country_code': {'value': None, 'explanation': 'No destination country code found on this freight invoice.', 'confidence': 1.0}, 'destination_address': {'value': None, 'explanation': 'No destination address found on this freight invoice.', 'confidence': 0.9}, 'destination_province': {'value': None, 'explanation': 'No destination province found on this freight invoice.', 'confidence': 1.0}, 'destination_region': {'value': None, 'explanation': 'No destination region found on this freight invoice.', 'confidence': 1.0}, 'port_of_discharge': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'shipment_weight': {'value': None, 'explanation': 'No shipment weight found for this shipment.', 'confidence': 1.0}, 'shipment_volume': {'value': None, 'explanation': 'No shipment volume found for this shipment.', 'confidence': 1.0}, 'shipment_total_value': {'value': 904.4, 'explanation': 'Extracted from Amount column subtotal for order 0378710: $904.40.', 'confidence': 1.0}, 'shipment_creation_date': {'value': '2026-06-26', 'explanation': 'Extracted from Delivery date column for order 0378710: 06/26/2026.', 'confidence': 0.9}, 'material_category': {'value': 'Unclassifiable', 'explanation': 'No commodity description found on freight invoice. BOL column contains reference number 80227871 only. PO column is empty. Charge names are Flat rate and Fuel Surcharge (not commodity signals). No equipment type, unit type, or other classification signals present. Classified as Unclassifiable pending BOL review.', 'confidence': 0.95}, 'container': {'value': [], 'explanation': 'No container identifiers found for this shipment.', 'confidence': 1.0}, 'charges': {'value': [{'charge_name': {'value': 'Flat rate', 'explanation': 'Extracted from Rate method column, row 10.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 595.0, 'explanation': 'Extracted from Amount column, row 10: $595.00.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 595.0, 'explanation': 'Extracted from Rate column, row 10: 595.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 1.0, 'explanation': 'Extracted from Units column, row 10: 1.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': 'Flat', 'explanation': 'Extracted from Rate method column: Flat rate.', 'confidence': 1.0}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}, {'charge_name': {'value': 'Fuel Surcharge', 'explanation': 'Extracted from PO No. column (used for charge description), row 11.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 309.4, 'explanation': 'Extracted from Amount column, row 11: 309.40.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 52.0, 'explanation': 'Extracted from Rate column, row 11: 52.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 595.0, 'explanation': 'Extracted from Units column, row 11: 595.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': None, 'explanation': 'No UOM specified for Fuel Surcharge line.', 'confidence': 1.0}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}], 'explanation': 'Extracted two charge lines for shipment 0378710: Flat rate and Fuel Surcharge.', 'confidence': 1.0}}, {'shipment_number': {'value': '0378711', 'explanation': 'Extracted from Order column, row 13.', 'confidence': 1.0}, 'consignee_name': {'value': None, 'explanation': 'No consignee name printed on this freight invoice.', 'confidence': 1.0}, 'shipment_tracking_number': {'value': None, 'explanation': 'No explicit tracking number labeled for this shipment.', 'confidence': 1.0}, 'stopover_location': {'value': None, 'explanation': 'No stopover location mentioned for this shipment.', 'confidence': 1.0}, 'dangerous_goods_indicator': {'value': None, 'explanation': 'No dangerous goods indicator found for this shipment.', 'confidence': 1.0}, 'thu_type': {'value': None, 'explanation': 'No handling unit type code found for this shipment.', 'confidence': 1.0}, 'thu_name': {'value': None, 'explanation': 'No handling unit name found for this shipment.', 'confidence': 1.0}, 'service_level': {'value': None, 'explanation': 'No service level descriptor found for this shipment.', 'confidence': 1.0}, 'number_of_pallets': {'value': None, 'explanation': 'No pallet count found for this shipment.', 'confidence': 1.0}, 'custom': {'value': {'value': {}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'pro_number': {'value': None, 'explanation': 'No PRO number labeled for this shipment.', 'confidence': 1.0}, 'mode': {'value': 'ROAD', 'explanation': 'Yandell Truckaway is a road carrier; charges include Flat rate and Fuel Surcharge consistent with truck transport.', 'confidence': 1.0}, 'source_name': {'value': '', 'explanation': 'No shipper/consignor name found on this freight invoice; no attached BOL available.', 'confidence': 0.9}, 'source_city': {'value': None, 'explanation': 'No origin city found on this freight invoice.', 'confidence': 0.9}, 'source_state': {'value': None, 'explanation': 'No origin state found on this freight invoice.', 'confidence': 0.9}, 'source_country': {'value': None, 'explanation': 'No origin country found on this freight invoice.', 'confidence': 0.9}, 'source_country_code': {'value': None, 'explanation': 'No origin country code found on this freight invoice.', 'confidence': 1.0}, 'source_address': {'value': None, 'explanation': 'No origin address found on this freight invoice.', 'confidence': 0.9}, 'source_province': {'value': None, 'explanation': 'No origin province found on this freight invoice.', 'confidence': 1.0}, 'source_region': {'value': None, 'explanation': 'No origin region found on this freight invoice.', 'confidence': 1.0}, 'port_of_loading': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'destination_name': {'value': None, 'explanation': 'No consignee/destination name found on this freight invoice.', 'confidence': 0.9}, 'destination_city': {'value': None, 'explanation': 'No destination city found on this freight invoice.', 'confidence': 0.9}, 'destination_state': {'value': None, 'explanation': 'No destination state found on this freight invoice.', 'confidence': 0.9}, 'destination_country': {'value': None, 'explanation': 'No destination country found on this freight invoice.', 'confidence': 0.9}, 'destination_country_code': {'value': None, 'explanation': 'No destination country code found on this freight invoice.', 'confidence': 1.0}, 'destination_address': {'value': None, 'explanation': 'No destination address found on this freight invoice.', 'confidence': 0.9}, 'destination_province': {'value': None, 'explanation': 'No destination province found on this freight invoice.', 'confidence': 1.0}, 'destination_region': {'value': None, 'explanation': 'No destination region found on this freight invoice.', 'confidence': 1.0}, 'port_of_discharge': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'shipment_weight': {'value': None, 'explanation': 'No shipment weight found for this shipment.', 'confidence': 1.0}, 'shipment_volume': {'value': None, 'explanation': 'No shipment volume found for this shipment.', 'confidence': 1.0}, 'shipment_total_value': {'value': 623.2, 'explanation': 'Extracted from Amount column subtotal for order 0378711: $623.20.', 'confidence': 1.0}, 'shipment_creation_date': {'value': '2026-06-26', 'explanation': 'Extracted from Delivery date column for order 0378711: 06/26/2026.', 'confidence': 0.9}, 'material_category': {'value': 'Unclassifiable', 'explanation': \"No commodity description found on freight invoice. BOL column contains reference numbers 226567/8-227773 only. PO column contains '141008' which is a PO number, not a commodity signal. Charge names are Flat rate and Fuel Surcharge (not commodity signals). No equipment type, unit type, or other classification signals present. Classified as Unclassifiable pending BOL review.\", 'confidence': 0.95}, 'container': {'value': [], 'explanation': 'No container identifiers found for this shipment.', 'confidence': 1.0}, 'charges': {'value': [{'charge_name': {'value': 'Flat rate', 'explanation': 'Extracted from Rate method column, row 13.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 410.0, 'explanation': 'Extracted from Amount column, row 13: $410.00.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 410.0, 'explanation': 'Extracted from Rate column, row 13: 410.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 1.0, 'explanation': 'Extracted from Units column, row 13: 1.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': 'Flat', 'explanation': 'Extracted from Rate method column: Flat rate.', 'confidence': 1.0}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}, {'charge_name': {'value': 'Fuel Surcharge', 'explanation': 'Extracted from PO No. column (used for charge description), row 15.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 213.2, 'explanation': 'Extracted from Amount column, row 15: 213.20.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 52.0, 'explanation': 'Extracted from Rate column, row 15: 52.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 410.0, 'explanation': 'Extracted from Units column, row 15: 410.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': None, 'explanation': 'No UOM specified for Fuel Surcharge line.', 'confidence': 1.0}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}], 'explanation': 'Extracted two charge lines for shipment 0378711: Flat rate and Fuel Surcharge.', 'confidence': 1.0}}, {'shipment_number': {'value': '0379136', 'explanation': 'Extracted from Order column, row 16.', 'confidence': 1.0}, 'consignee_name': {'value': None, 'explanation': 'No consignee name printed on this freight invoice.', 'confidence': 1.0}, 'shipment_tracking_number': {'value': None, 'explanation': 'No explicit tracking number labeled for this shipment.', 'confidence': 1.0}, 'stopover_location': {'value': None, 'explanation': 'No stopover location mentioned for this shipment.', 'confidence': 1.0}, 'dangerous_goods_indicator': {'value': None, 'explanation': 'No dangerous goods indicator found for this shipment.', 'confidence': 1.0}, 'thu_type': {'value': None, 'explanation': 'No handling unit type code found for this shipment.', 'confidence': 1.0}, 'thu_name': {'value': 'bins', 'explanation': \"Extracted from BOL column, row 16: 'bins 6/29/26' — 'bins' is a handling unit name.\", 'confidence': 0.85}, 'service_level': {'value': None, 'explanation': 'No service level descriptor found for this shipment.', 'confidence': 1.0}, 'number_of_pallets': {'value': None, 'explanation': 'No pallet count found for this shipment.', 'confidence': 1.0}, 'custom': {'value': {'value': {}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'pro_number': {'value': None, 'explanation': 'No PRO number labeled for this shipment.', 'confidence': 1.0}, 'mode': {'value': 'ROAD', 'explanation': 'Yandell Truckaway is a road carrier; charges include Flat rate and Fuel Surcharge consistent with truck transport.', 'confidence': 1.0}, 'source_name': {'value': '', 'explanation': 'No shipper/consignor name found on this freight invoice; no attached BOL available.', 'confidence': 0.9}, 'source_city': {'value': None, 'explanation': 'No origin city found on this freight invoice.', 'confidence': 0.9}, 'source_state': {'value': None, 'explanation': 'No origin state found on this freight invoice.', 'confidence': 0.9}, 'source_country': {'value': None, 'explanation': 'No origin country found on this freight invoice.', 'confidence': 0.9}, 'source_country_code': {'value': None, 'explanation': 'No origin country code found on this freight invoice.', 'confidence': 1.0}, 'source_address': {'value': None, 'explanation': 'No origin address found on this freight invoice.', 'confidence': 0.9}, 'source_province': {'value': None, 'explanation': 'No origin province found on this freight invoice.', 'confidence': 1.0}, 'source_region': {'value': None, 'explanation': 'No origin region found on this freight invoice.', 'confidence': 1.0}, 'port_of_loading': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'destination_name': {'value': None, 'explanation': 'No consignee/destination name found on this freight invoice.', 'confidence': 0.9}, 'destination_city': {'value': None, 'explanation': 'No destination city found on this freight invoice.', 'confidence': 0.9}, 'destination_state': {'value': None, 'explanation': 'No destination state found on this freight invoice.', 'confidence': 0.9}, 'destination_country': {'value': None, 'explanation': 'No destination country found on this freight invoice.', 'confidence': 0.9}, 'destination_country_code': {'value': None, 'explanation': 'No destination country code found on this freight invoice.', 'confidence': 1.0}, 'destination_address': {'value': None, 'explanation': 'No destination address found on this freight invoice.', 'confidence': 0.9}, 'destination_province': {'value': None, 'explanation': 'No destination province found on this freight invoice.', 'confidence': 1.0}, 'destination_region': {'value': None, 'explanation': 'No destination region found on this freight invoice.', 'confidence': 1.0}, 'port_of_discharge': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'shipment_weight': {'value': None, 'explanation': 'No shipment weight found for this shipment.', 'confidence': 1.0}, 'shipment_volume': {'value': None, 'explanation': 'No shipment volume found for this shipment.', 'confidence': 1.0}, 'shipment_total_value': {'value': 543.85, 'explanation': 'Extracted from Amount column subtotal for order 0379136: $543.85.', 'confidence': 1.0}, 'shipment_creation_date': {'value': '2026-06-29', 'explanation': 'Extracted from Delivery date column for order 0379136: 06/29/2026.', 'confidence': 0.9}, 'material_category': {'value': 'Materials', 'explanation': \"BOL column contains 'bins 6/29/26' — 'BINS' is a Materials classification keyword per instructions (source c). Classified as Materials.\", 'confidence': 0.9}, 'container': {'value': [], 'explanation': 'No container identifiers found for this shipment.', 'confidence': 1.0}, 'charges': {'value': [{'charge_name': {'value': 'Flat rate', 'explanation': 'Extracted from Rate method column, row 16.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 365.0, 'explanation': 'Extracted from Amount column, row 16: $365.00.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 365.0, 'explanation': 'Extracted from Rate column, row 16: 365.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 1.0, 'explanation': 'Extracted from Units column, row 16: 1.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': 'Flat', 'explanation': 'Extracted from Rate method column: Flat rate.', 'confidence': 1.0}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}, {'charge_name': {'value': 'Fuel Surcharge', 'explanation': 'Extracted from PO No. column (used for charge description), row 17.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 178.85, 'explanation': 'Extracted from Amount column, row 17: 178.85.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 49.0, 'explanation': 'Extracted from Rate column, row 17: 49.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 365.0, 'explanation': 'Extracted from Units column, row 17: 365.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': None, 'explanation': 'No UOM specified for Fuel Surcharge line.', 'confidence': 1.0}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}], 'explanation': 'Extracted two charge lines for shipment 0379136: Flat rate and Fuel Surcharge.', 'confidence': 1.0}}, {'shipment_number': {'value': '0379143', 'explanation': 'Extracted from Order column, row 19.', 'confidence': 1.0}, 'consignee_name': {'value': None, 'explanation': 'No consignee name printed on this freight invoice.', 'confidence': 1.0}, 'shipment_tracking_number': {'value': None, 'explanation': 'No explicit tracking number labeled for this shipment.', 'confidence': 1.0}, 'stopover_location': {'value': None, 'explanation': 'No stopover location mentioned for this shipment.', 'confidence': 1.0}, 'dangerous_goods_indicator': {'value': None, 'explanation': 'No dangerous goods indicator found for this shipment.', 'confidence': 1.0}, 'thu_type': {'value': None, 'explanation': 'No handling unit type code found for this shipment.', 'confidence': 1.0}, 'thu_name': {'value': None, 'explanation': 'No handling unit name found for this shipment.', 'confidence': 1.0}, 'service_level': {'value': None, 'explanation': 'No service level descriptor found for this shipment.', 'confidence': 1.0}, 'number_of_pallets': {'value': None, 'explanation': 'No pallet count found for this shipment.', 'confidence': 1.0}, 'custom': {'value': {'value': {}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'explanation': 'No shipment-level custom fields found.', 'confidence': 1.0}, 'pro_number': {'value': None, 'explanation': 'No PRO number labeled for this shipment.', 'confidence': 1.0}, 'mode': {'value': 'ROAD', 'explanation': 'Yandell Truckaway is a road carrier; charges include BRIDGE (likely a bridge toll charge) and Fuel Surcharge consistent with truck transport.', 'confidence': 1.0}, 'source_name': {'value': '', 'explanation': 'No shipper/consignor name found on this freight invoice; no attached BOL available.', 'confidence': 0.9}, 'source_city': {'value': None, 'explanation': 'No origin city found on this freight invoice.', 'confidence': 0.9}, 'source_state': {'value': None, 'explanation': 'No origin state found on this freight invoice.', 'confidence': 0.9}, 'source_country': {'value': None, 'explanation': 'No origin country found on this freight invoice.', 'confidence': 0.9}, 'source_country_code': {'value': None, 'explanation': 'No origin country code found on this freight invoice.', 'confidence': 1.0}, 'source_address': {'value': None, 'explanation': 'No origin address found on this freight invoice.', 'confidence': 0.9}, 'source_province': {'value': None, 'explanation': 'No origin province found on this freight invoice.', 'confidence': 1.0}, 'source_region': {'value': None, 'explanation': 'No origin region found on this freight invoice.', 'confidence': 1.0}, 'port_of_loading': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'destination_name': {'value': None, 'explanation': 'No consignee/destination name found on this freight invoice.', 'confidence': 0.9}, 'destination_city': {'value': None, 'explanation': 'No destination city found on this freight invoice.', 'confidence': 0.9}, 'destination_state': {'value': None, 'explanation': 'No destination state found on this freight invoice.', 'confidence': 0.9}, 'destination_country': {'value': None, 'explanation': 'No destination country found on this freight invoice.', 'confidence': 0.9}, 'destination_country_code': {'value': None, 'explanation': 'No destination country code found on this freight invoice.', 'confidence': 1.0}, 'destination_address': {'value': None, 'explanation': 'No destination address found on this freight invoice.', 'confidence': 0.9}, 'destination_province': {'value': None, 'explanation': 'No destination province found on this freight invoice.', 'confidence': 1.0}, 'destination_region': {'value': None, 'explanation': 'No destination region found on this freight invoice.', 'confidence': 1.0}, 'port_of_discharge': {'value': None, 'explanation': 'Not applicable for road carrier invoice.', 'confidence': 1.0}, 'shipment_weight': {'value': None, 'explanation': 'No shipment weight found for this shipment.', 'confidence': 1.0}, 'shipment_volume': {'value': None, 'explanation': 'No shipment volume found for this shipment.', 'confidence': 1.0}, 'shipment_total_value': {'value': 603.45, 'explanation': 'Extracted from Amount column subtotal for order 0379143: $603.45.', 'confidence': 1.0}, 'shipment_creation_date': {'value': '2026-06-30', 'explanation': 'Extracted from Delivery date column for order 0379143: 06/30/2026.', 'confidence': 0.9}, 'material_category': {'value': 'Unclassifiable', 'explanation': \"No commodity description found on freight invoice. BOL column contains reference number 379143 only. PO column contains 'BENICIA4434' which is a PO number, not a commodity signal. Rate method column contains 'BRIDGE' which is a charge name (bridge toll), not a commodity signal. No equipment type, unit type, or other classification signals present. Classified as Unclassifiable pending BOL review.\", 'confidence': 0.95}, 'container': {'value': [], 'explanation': 'No container identifiers found for this shipment.', 'confidence': 1.0}, 'charges': {'value': [{'charge_name': {'value': 'BRIDGE', 'explanation': 'Extracted from Rate method column, row 19.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 405.0, 'explanation': 'Extracted from Amount column, row 19: $405.00.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 405.0, 'explanation': 'Extracted from Rate column, row 19: 405.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 1.0, 'explanation': 'Extracted from Units column, row 19: 1.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': 'Flat', 'explanation': 'Inferred from Units = 1.0000 and Rate method context.', 'confidence': 0.9}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}, {'charge_name': {'value': 'Fuel Surcharge', 'explanation': 'Extracted from PO No. column (used for charge description), row 20.', 'confidence': 1.0}, 'charge_gross_amount': {'value': 198.45, 'explanation': 'Extracted from Amount column, row 20: 198.45.', 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column present.', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice currency.', 'confidence': 1.0}, 'tariff_rate': {'value': 49.0, 'explanation': 'Extracted from Rate column, row 20: 49.0000.', 'confidence': 1.0}, 'tariff_qty': {'value': 405.0, 'explanation': 'Extracted from Units column, row 20: 405.0000.', 'confidence': 1.0}, 'tariff_uom': {'value': None, 'explanation': 'No UOM specified for Fuel Surcharge line.', 'confidence': 1.0}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail for this charge line.', 'confidence': 1.0}}], 'explanation': 'Extracted two charge lines for shipment 0379143: BRIDGE and Fuel Surcharge.', 'confidence': 1.0}}]"
+            }
+          }
+        },
+        {
+          "M": {
+            "confidence": {
+              "N": "1"
+            },
+            "explanation": {
+              "S": "Not applicable; this is a standard freight invoice, not a proforma invoice."
+            },
+            "field_name": {
+              "S": "proforma_invoice_creation_date"
+            },
+            "value": {
+              "S": ""
+            }
+          }
+        }
+      ]
+    },
+    "file_type": {
+      "S": "PDF"
+    },
+    "filename": {
+      "S": "d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1).pdf"
+    },
+    "invoice_date": {
+      "S": "2026-07-06"
+    },
+    "invoice_number": {
+      "S": "29669"
+    },
+    "mode": {
+      "S": "ROAD"
+    },
+    "output_path": {
+      "S": "s3://pando-delicato-bucket/invoice/output/json/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_Freight_Invoice.json"
+    },
+    "processing_type": {
+      "S": "Invoice"
+    },
+    "s3_path": {
+      "S": "s3://pando-delicato-bucket/invoice/input/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1).pdf"
+    },
+    "stage_clustering": {
+      "M": {
+        "clusters_found": {
+          "N": "10"
+        },
+        "completed_at": {
+          "S": "2026-09-17T08:40:55.123Z"
+        },
+        "doc_types": {
+          "L": [
+            {
+              "S": "Freight Invoice"
+            },
+            {
+              "S": "Transport Document"
+            },
+            {
+              "S": "Transport Document"
+            },
+            {
+              "S": "Transport Document"
+            },
+            {
+              "S": "Transport Document"
+            },
+            {
+              "S": "Transport Document"
+            },
+            {
+              "S": "Transport Document"
+            },
+            {
+              "S": "Transport Document"
+            },
+            {
+              "S": "Transport Document"
+            },
+            {
+              "S": "Transport Document"
+            }
+          ]
+        },
+        "status": {
+          "S": "COMPLETED"
+        }
+      }
+    },
+    "stage_llm_extraction": {
+      "M": {
+        "completed_at": {
+          "S": "2026-09-17T08:49:14.993Z"
+        },
+        "confidence_score": {
+          "N": "0.99"
+        },
+        "fields_extracted": {
+          "N": "30"
+        },
+        "status": {
+          "S": "COMPLETED"
+        }
+      }
+    },
+    "stage_textract": {
+      "M": {
+        "bol_clusters": {
+          "N": "9"
+        },
+        "bol_textract_s3_path": {
+          "S": "s3://pando-delicato-bucket/invoice/output/textract/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_9_Transport_Document_textract.txt"
+        },
+        "completed_at": {
+          "S": "2026-09-17T08:49:14.641Z"
+        },
+        "fi_textract_s3_path": {
+          "S": "s3://pando-delicato-bucket/invoice/output/textract/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)/d547c7f2-a881-4d36-bdcc-95e4895522a5_8d180b09-ec8b-4fa1-8326-2735ecd1f57d_Yandell_29669 (1)_0_Freight_Invoice_textract.txt"
+        },
+        "freight_invoice_clusters": {
+          "N": "1"
+        },
+        "skipped_clusters": {
+          "N": "0"
+        },
+        "status": {
+          "S": "COMPLETED"
+        }
+      }
+    },
+    "stage_validation": {
+      "M": {
+        "completed_at": {
+          "S": "2026-09-17T08:49:17.895Z"
+        },
+        "missing_fields": {
+          "L": []
+        },
+        "missing_fields_count": {
+          "N": "0"
+        },
+        "status": {
+          "S": "PASSED"
+        }
+      }
+    },
+    "status": {
+      "S": "COMPLETED"
+    },
+    "transaction_steps": {
+      "L": [
+        {
+          "M": {
+            "step_completed_at": {
+              "S": "2026-09-17T08:39:42.962Z"
+            },
+            "step_error_code": {
+              "S": ""
+            },
+            "step_error_message": {
+              "S": ""
+            },
+            "step_key": {
+              "S": "RECEIVE"
+            },
+            "step_started_at": {
+              "S": "2026-09-17T08:39:42.162Z"
+            },
+            "step_status": {
+              "S": "SUCCESS"
+            },
+            "transaction_status": {
+              "S": "PROCESSING"
+            }
+          }
+        },
+        {
+          "M": {
+            "step_completed_at": {
+              "S": "2026-09-17T08:39:43.286Z"
+            },
+            "step_error_code": {
+              "S": ""
+            },
+            "step_error_message": {
+              "S": ""
+            },
+            "step_key": {
+              "S": "CLASSIFICATION"
+            },
+            "step_started_at": {
+              "S": "2026-09-17T08:39:43.158Z"
+            },
+            "step_status": {
+              "S": "SUCCESS"
+            },
+            "transaction_status": {
+              "S": "PROCESSING"
+            }
+          }
+        },
+        {
+          "M": {
+            "step_completed_at": {
+              "S": "2026-09-17T08:49:14.810Z"
+            },
+            "step_error_code": {
+              "S": ""
+            },
+            "step_error_message": {
+              "S": ""
+            },
+            "step_key": {
+              "S": "INVOICE_PROCESSING"
+            },
+            "step_started_at": {
+              "S": "2026-09-17T08:40:15.431Z"
+            },
+            "step_status": {
+              "S": "SUCCESS"
+            },
+            "transaction_status": {
+              "S": "PROCESSING"
+            }
+          }
+        },
+        {
+          "M": {
+            "step_completed_at": {
+              "S": "2026-09-17T08:49:17.078Z"
+            },
+            "step_error_code": {
+              "S": ""
+            },
+            "step_error_message": {
+              "S": ""
+            },
+            "step_key": {
+              "S": "VALIDATION"
+            },
+            "step_started_at": {
+              "S": "2026-09-17T08:49:16.578Z"
+            },
+            "step_status": {
+              "S": "SUCCESS"
+            },
+            "transaction_status": {
+              "S": "PROCESSING"
+            }
+          }
+        },
+        {
+          "M": {
+            "step_completed_at": {
+              "S": "2026-09-17T08:49:17.565Z"
+            },
+            "step_error_code": {
+              "S": ""
+            },
+            "step_error_message": {
+              "S": ""
+            },
+            "step_key": {
+              "S": "INGEST"
+            },
+            "step_started_at": {
+              "S": "2026-09-17T08:49:17.203Z"
+            },
+            "step_status": {
+              "S": "SUCCESS"
+            },
+            "transaction_status": {
+              "S": "COMPLETED"
+            }
+          }
+        }
+      ]
+    },
+    "type": {
+      "S": "Attachment"
+    },
+    "updated_at": {
+      "N": "1789634957902"
+    },
+    "updated_at_iso": {
+      "S": "2026-09-17T08:49:17.902219"
+    }
+  }
