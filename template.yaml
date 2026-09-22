@@ -42,6 +42,24 @@ Globals:
         FRONTEND_URL:               !Ref FrontendUrl
         SOURCE_ACCOUNT_SECRET_NAME: !Ref SourceAccountCredentialsSecret
         SOURCE_ACCOUNT_REGION:      !Ref SourceAccountRegion
+        # Manually created secret for Observability DynamoDB (ops account keys)
+        OBSERVABILITY_DDB_SECRET_NAME: invoice-testing-agent/observability-dynamodb-secrets
+        OBSERVABILITY_DDB_SECRET_REGION: us-east-1
+        OBSERVABILITY_DDB_REGION: us-east-1
+        DELICATO_LOG_TABLE: pando-delicato-log-tmp
+        GE_LOG_TABLE: pando-general-electronics-logs-temp
+        JNJ_LOG_TABLE: jnj_logs
+        OTTER_LOG_TABLE: pando-otter-logs
+        GHENT_LOG_TABLE: pando-ghent-log-temp
+        WEST_MARINE_LOG_TABLE: pando-west-marine-logs
+        VIKING_LOG_TABLE: pando-viking-log
+        UNILEVER_LOG_TABLE: Pando-Unilever-Logs-Temp
+        UNILEVER_EXCEL_LOG_TABLE: unilever-excel-demo
+        DELICATO_AWS_REGION: us-east-1
+        META_DDB_SECRET_NAME: invoice-testing-agent/observability-dynamodb-secrets-meta
+        META_DDB_SECRET_REGION: us-east-1
+        META_DDB_REGION: us-east-1
+        META_LOG_TABLE: ""
 
 Resources:
 
@@ -178,7 +196,10 @@ Resources:
                 - !GetAtt JobsTable.Arn
             - Effect: Allow
               Action: secretsmanager:GetSecretValue
-              Resource: !Ref SourceAccountCredentialsSecret
+              Resource:
+                - !Ref SourceAccountCredentialsSecret
+                - !Sub "arn:aws:secretsmanager:us-east-1:${AWS::AccountId}:secret:invoice-testing-agent/observability-dynamodb-secrets*"
+                - !Sub "arn:aws:secretsmanager:us-east-1:${AWS::AccountId}:secret:invoice-testing-agent/observability-dynamodb-secrets-meta*"
     Metadata:
       DockerContext: ./backend
       Dockerfile:    Dockerfile

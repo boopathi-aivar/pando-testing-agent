@@ -1,0 +1,632 @@
+{
+  "pk": {
+    "S": "EMAIL#42rkscct6rtjg6fdfidhlukceqbgnf97oqk3k101"
+  },
+  "sk": {
+    "S": "ATTACHMENT#1ddfa861-eea9-41e3-9cec-a98695f6d9a9"
+  },
+  "api_payload": {
+    "S": "{\"data\": [{\"invoice_number\": \"CWE0091698\", \"invoice_date\": \"2026-08-24T12:00:00.000Z\", \"payment_due_date\": \"2026-09-23T12:00:00.000Z\", \"vendor_reference_id\": \"3010504\", \"currency\": \"USD\", \"total_invoice_value\": 2520.0, \"total_tax_amount\": 0.0, \"bill_of_lading_number\": \"\", \"bill_of_entry_number\": \"\", \"bill_to_name\": \"DELICATO\", \"bill_to_gst\": \"\", \"bill_to_address\": \"12001 SOUTH HIGHWAY 99 MANTECA CA 95336\", \"bill_to_phone_number\": \"\", \"bill_to_email\": \"\", \"billing_entity_name\": \"\", \"custom\": {\"source_type\": \"email\", \"shipper_email\": \"delicato@pibypando.ai\", \"sender_email\": \"m.pulli@jasteer.com\", \"vendor_name\": \"Cobalt Wine Logistics, LLC\", \"client_id\": 27, \"attachment_key\": \"invoice/input/17588dc7-91b2-459e-ad31-353f58e52246_CWE0091698.pdf\", \"attachment_bucket\": \"nam-pando-prod-delicato-bucket\", \"pay_as_present\": false, \"transaction_id\": \"1ddfa861-eea9-41e3-9cec-a98695f6d9a9\", \"po_number\": [], \"bol_number\": [], \"tractor_trailer_number\": [], \"order_number\": [], \"load_number\": \"\"}, \"payment_terms\": \"net 30\", \"airway_bill_number\": \"\", \"hsn_number\": \"\", \"documents_attachment\": [{\"file_path\": \"cluster_documents/17588dc7-91b2-459e-ad31-353f58e52246_CWE0091698/17588dc7-91b2-459e-ad31-353f58e52246_CWE0091698_0_Freight_Invoice.pdf\", \"bucket_name\": \"nam-pando-prod-delicato-bucket\", \"file_name\": \"17588dc7-91b2-459e-ad31-353f58e52246_CWE0091698_0_Freight_Invoice.pdf\", \"file_extension\": \"pdf\", \"type\": \"Freight Invoice\"}], \"shipments\": [{\"shipment_number\": \"80766885,80766894\", \"consignee_name\": \"COBALT EAST\", \"shipment_tracking_number\": \"\", \"stopover_location\": \"\", \"dangerous_goods_indicator\": false, \"thu_type\": \"PCS\", \"thu_name\": \"PCS\", \"service_level\": \"\", \"number_of_pallets\": 0.0, \"custom\": {\"delivery_type\": \"\", \"freight_provider\": \"\", \"material_category\": \"Unclassifiable\"}, \"pro_number\": \"\", \"mode\": \"ROAD\", \"source_name\": \"COBALT EAST\", \"source_city\": \"BRISTOL\", \"source_state\": \"PA\", \"source_country\": \"US\", \"source_country_code\": \"US\", \"source_address\": \"2301 HUNTER RD BRISTOL PA 19007\", \"source_province\": \"\", \"source_region\": \"\", \"port_of_loading\": \"\", \"destination_name\": \"COBALT EAST\", \"destination_city\": \"BRISTOL\", \"destination_state\": \"PA\", \"destination_country\": \"US\", \"destination_country_code\": \"US\", \"destination_address\": \"2301 HUNTER RD BRISTOL PA 19007\", \"destination_province\": \"\", \"destination_region\": \"\", \"port_of_discharge\": \"\", \"shipment_weight\": 0.0, \"shipment_volume\": 0.0, \"shipment_total_value\": 0.0, \"shipment_creation_date\": \"2026-08-21T12:00:00.000Z\", \"container\": [], \"charges\": [{\"charge_name\": \"REPACKING\", \"charge_gross_amount\": 2520.0, \"charge_code\": \"REPACKING\", \"currency\": \"USD\", \"tariff_rate\": 5.0, \"tariff_qty\": 504.0, \"tariff_uom\": \"Per Piece\", \"tariff_description\": \"\"}], \"source_code\": \"na\", \"destination_code\": \"na\"}]}]}"
+  },
+  "api_response": {
+    "M": {
+      "body": {
+        "S": "{\"status\":\"Request Accepted\"}"
+      },
+      "status_code": {
+        "N": "200"
+      },
+      "success": {
+        "BOOL": true
+      },
+      "timestamp": {
+        "S": "2026-08-25T14:29:44.699095"
+      }
+    }
+  },
+  "attachment_id": {
+    "S": "1ddfa861-eea9-41e3-9cec-a98695f6d9a9"
+  },
+  "carrier_name": {
+    "S": "Cobalt Wine Logistics, LLC"
+  },
+  "completed_at": {
+    "N": "1787668184868"
+  },
+  "completed_at_iso": {
+    "S": "2026-08-25T14:29:44.868943"
+  },
+  "confidence_score": {
+    "N": "1"
+  },
+  "created_at": {
+    "N": "1787668071"
+  },
+  "created_at_iso": {
+    "S": "2026-08-25T14:27:51.700168"
+  },
+  "email_id": {
+    "S": "42rkscct6rtjg6fdfidhlukceqbgnf97oqk3k101"
+  },
+  "extracted_fields": {
+    "L": [
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Extracted from header label 'INVOICE NO: CWE0091698'"
+          },
+          "field_name": {
+            "S": "invoice_number"
+          },
+          "value": {
+            "S": "CWE0091698"
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Extracted from header label 'DATE: 8/24/2026' and converted to ISO format"
+          },
+          "field_name": {
+            "S": "invoice_date"
+          },
+          "value": {
+            "S": "2026-08-24"
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Always left blank per instructions"
+          },
+          "field_name": {
+            "S": "vendor_reference_id"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "No explicit due date printed and no payment terms with day-count to calculate from"
+          },
+          "field_name": {
+            "S": "payment_due_date"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "No BOL number explicitly labeled as B/L No., BOL, Bill of Lading No., or Waybill No. on this invoice"
+          },
+          "field_name": {
+            "S": "bill_of_lading_number"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "No bill of entry number explicitly labeled on this invoice"
+          },
+          "field_name": {
+            "S": "bill_of_entry_number"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Confirmed from 'Amount Due $USD' label on invoice; Cobalt Wine Logistics invoices are exclusively USD"
+          },
+          "field_name": {
+            "S": "currency"
+          },
+          "value": {
+            "S": "USD"
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Extracted from 'Amount Due $USD $2,520.00' as the final grand total payable"
+          },
+          "field_name": {
+            "S": "total_invoice_value"
+          },
+          "value": {
+            "S": "2520.0"
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "No payment terms text explicitly printed on this invoice"
+          },
+          "field_name": {
+            "S": "payment_terms"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "No assessable value explicitly printed on this invoice"
+          },
+          "field_name": {
+            "S": "assessable_value"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Extracted from 'Charges Sub Total: $2,520.00' as the subtotal before any adjustments"
+          },
+          "field_name": {
+            "S": "net_invoice_value"
+          },
+          "value": {
+            "S": "2520.0"
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "No rounding adjustment explicitly printed on this invoice"
+          },
+          "field_name": {
+            "S": "round_off"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "No rate-validity date explicitly provided on this invoice"
+          },
+          "field_name": {
+            "S": "rate_applicability_date"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Extracted from 'DELIVERY DATE: 8/21/2026' in the header table row"
+          },
+          "field_name": {
+            "S": "arrival_date"
+          },
+          "value": {
+            "S": "2026-08-21"
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Extracted from 'PICKUP DATE: 8/21/2026' in the header table row"
+          },
+          "field_name": {
+            "S": "departure_date"
+          },
+          "value": {
+            "S": "2026-08-21"
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Null for Cobalt Wine Logistics road carrier invoices; no AWB numbers on road invoices"
+          },
+          "field_name": {
+            "S": "airway_bill_number"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "No HS/HSN code present on this invoice"
+          },
+          "field_name": {
+            "S": "hsn_number"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Extracted from 'BILL TO' block: 'DELICATO 12001 SOUTH HIGHWAY 99 MANTECA CA 95336'"
+          },
+          "field_name": {
+            "S": "bill_to_name"
+          },
+          "value": {
+            "S": "DELICATO"
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Extracted from 'BILL TO' block address lines"
+          },
+          "field_name": {
+            "S": "bill_to_address"
+          },
+          "value": {
+            "S": "12001 SOUTH HIGHWAY 99 MANTECA CA 95336"
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "No PO number explicitly labeled on this invoice"
+          },
+          "field_name": {
+            "S": "po_number"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "No BOL number explicitly labeled on this invoice"
+          },
+          "field_name": {
+            "S": "bol_number"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "No tractor/trailer numbers explicitly labeled on this invoice"
+          },
+          "field_name": {
+            "S": "tractor_trailer_number"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "The LOAD NUMBER column in the header table row is empty; no load number present"
+          },
+          "field_name": {
+            "S": "load_number"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "No order number explicitly labeled on this invoice"
+          },
+          "field_name": {
+            "S": "order_number"
+          },
+          "value": {
+            "S": ""
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Using invoice_date as proforma_invoice_creation_date per schema requirement"
+          },
+          "field_name": {
+            "S": "proforma_invoice_creation_date"
+          },
+          "value": {
+            "S": "2026-08-24"
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "No supporting documents referenced on this invoice"
+          },
+          "field_name": {
+            "S": "documents_attachment"
+          },
+          "value": {
+            "S": "[]"
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Custom fields array containing invoice-level extra fields"
+          },
+          "field_name": {
+            "S": "custom_fields"
+          },
+          "value": {
+            "S": "{'value': [{'field_name': {'value': 'INVOICE CODE', 'explanation': \"Extracted from header table label 'INVOICE CODE'\", 'confidence': 1.0}, 'field_value': {'value': '80766885,80766894', 'explanation': 'Extracted from header table row under INVOICE CODE column', 'confidence': 1.0}}], 'explanation': 'Captured INVOICE CODE as a custom field not mapped elsewhere', 'confidence': 1.0}"
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Invoice-level extra fields object"
+          },
+          "field_name": {
+            "S": "custom"
+          },
+          "value": {
+            "S": "{'value': {}, 'explanation': 'No additional invoice-level custom fields to capture', 'confidence': 1.0}"
+          }
+        }
+      },
+      {
+        "M": {
+          "confidence": {
+            "N": "1"
+          },
+          "explanation": {
+            "S": "Extracted one shipment record from the invoice"
+          },
+          "field_name": {
+            "S": "shipments"
+          },
+          "value": {
+            "S": "[{'shipment_number': {'value': '80766885,80766894', 'explanation': \"LOAD NUMBER column is empty; using CONTAINER NO value '80766885,80766894' from the same header table row per instructions\", 'confidence': 0.9}, 'consignee_name': {'value': 'COBALT EAST', 'explanation': \"Extracted from 'CONSIGNEE' block: 'COBALT EAST 2301 HUNTER RD BRISTOL PA 19007'\", 'confidence': 1.0}, 'shipment_tracking_number': {'value': None, 'explanation': 'No explicit tracking number labeled on this invoice', 'confidence': 1.0}, 'stopover_location': {'value': None, 'explanation': 'No stopover or intermediate stop explicitly mentioned', 'confidence': 1.0}, 'dangerous_goods_indicator': {'value': None, 'explanation': 'No dangerous goods, DG, Hazmat, UN Number, or Flammable indicators present', 'confidence': 1.0}, 'thu_type': {'value': 'PCS', 'explanation': \"Extracted from charge line column header 'PCS.' indicating pieces as the handling unit type\", 'confidence': 0.9}, 'thu_name': {'value': 'Pieces', 'explanation': \"Inferred from 'PCS.' column header as the handling unit name\", 'confidence': 0.9}, 'service_level': {'value': None, 'explanation': 'No service level descriptor (LTL, FTL, Temperature Controlled, etc.) explicitly printed', 'confidence': 1.0}, 'number_of_pallets': {'value': None, 'explanation': 'No pallet count explicitly printed on this invoice', 'confidence': 1.0}, 'custom': {'value': {'value': {}, 'explanation': 'No additional shipment-level custom fields to capture', 'confidence': 1.0}, 'explanation': 'Shipment-level extra fields object', 'confidence': 1.0}, 'pro_number': {'value': None, 'explanation': 'No PRO number explicitly labeled on this invoice', 'confidence': 1.0}, 'mode': {'value': 'ROAD', 'explanation': 'Cobalt Wine Logistics is a road carrier; invoice contains repacking charge typical of warehouse/road operations; no ocean/air/rail indicators present', 'confidence': 1.0}, 'source_name': {'value': 'COBALT EAST', 'explanation': \"Extracted from 'SHIPPER' block: 'COBALT EAST 2301 HUNTER RD BRISTOL PA 19007'\", 'confidence': 1.0}, 'source_city': {'value': 'BRISTOL', 'explanation': 'Extracted from shipper address block city token', 'confidence': 1.0}, 'source_state': {'value': 'PA', 'explanation': 'Extracted from shipper address block state token', 'confidence': 1.0}, 'source_country': {'value': None, 'explanation': 'No country explicitly printed in shipper address block', 'confidence': 1.0}, 'source_country_code': {'value': None, 'explanation': 'No country code explicitly printed in shipper address block', 'confidence': 1.0}, 'source_address': {'value': '2301 HUNTER RD BRISTOL PA 19007', 'explanation': \"Extracted full shipper address from 'SHIPPER' block\", 'confidence': 1.0}, 'source_province': {'value': None, 'explanation': 'No province explicitly printed in shipper address block', 'confidence': 1.0}, 'source_region': {'value': None, 'explanation': 'No broader region explicitly printed in shipper address block', 'confidence': 1.0}, 'port_of_loading': {'value': None, 'explanation': 'Null for Cobalt Wine Logistics road invoice; no port of loading explicitly printed', 'confidence': 1.0}, 'destination_name': {'value': 'COBALT EAST', 'explanation': \"Extracted from 'CONSIGNEE' block: 'COBALT EAST 2301 HUNTER RD BRISTOL PA 19007'\", 'confidence': 1.0}, 'destination_city': {'value': 'BRISTOL', 'explanation': 'Extracted from consignee address block city token', 'confidence': 1.0}, 'destination_state': {'value': 'PA', 'explanation': 'Extracted from consignee address block state token', 'confidence': 1.0}, 'destination_country': {'value': None, 'explanation': 'No country explicitly printed in consignee address block', 'confidence': 1.0}, 'destination_country_code': {'value': None, 'explanation': 'No country code explicitly printed in consignee address block', 'confidence': 1.0}, 'destination_address': {'value': '2301 HUNTER RD BRISTOL PA 19007', 'explanation': \"Extracted full consignee address from 'CONSIGNEE' block\", 'confidence': 1.0}, 'destination_province': {'value': None, 'explanation': 'No province explicitly printed in consignee address block', 'confidence': 1.0}, 'destination_region': {'value': None, 'explanation': 'No broader region explicitly printed in consignee address block', 'confidence': 1.0}, 'port_of_discharge': {'value': None, 'explanation': 'Null for Cobalt Wine Logistics road invoice; no port of discharge explicitly printed', 'confidence': 1.0}, 'shipment_weight': {'value': None, 'explanation': 'WEIGHT column is empty; no shipment weight explicitly printed', 'confidence': 1.0}, 'shipment_volume': {'value': None, 'explanation': 'No shipment volume explicitly printed on this invoice', 'confidence': 1.0}, 'shipment_total_value': {'value': None, 'explanation': 'No cargo/declared value explicitly printed on this invoice', 'confidence': 1.0}, 'shipment_creation_date': {'value': '2026-08-21', 'explanation': \"Extracted from 'PICKUP DATE: 8/21/2026' in the header table row as the shipment/load date\", 'confidence': 1.0}, 'material_category': {'value': 'Unclassifiable', 'explanation': \"This invoice is for a standalone accessorial charge 'REPACKING' with no commodity description, no equipment type, no meaningful unit counts beyond pieces, and no reference field hints. The shipper and consignee are both Cobalt East warehouse locations, indicating an internal warehouse service. No signals for Materials, Barrels, Concentrate, Grapes, Hi-Proof Liquor, Bulk Wine, or Cased Wine are present.\", 'confidence': 0.95}, 'container': {'value': [], 'explanation': 'No container identifiers explicitly printed; container array left empty per instructions for road invoices', 'confidence': 1.0}, 'charges': {'value': [{'charge_name': {'value': 'REPACKING', 'explanation': \"Extracted from charge line 'DESCRIPTION' column: 'REPACKING'\", 'confidence': 1.0}, 'charge_gross_amount': {'value': 2520.0, 'explanation': \"Extracted from charge line 'CHARGES' column: '$2,520.00'\", 'confidence': 1.0}, 'charge_code': {'value': None, 'explanation': 'No charge code column or label present on this invoice', 'confidence': 1.0}, 'currency': {'value': 'USD', 'explanation': 'Inherited from invoice-level currency USD', 'confidence': 1.0}, 'tariff_rate': {'value': 5.0, 'explanation': \"Extracted from charge line 'RATE' column: '5.000'\", 'confidence': 1.0}, 'tariff_qty': {'value': 504, 'explanation': \"Extracted from charge line 'PCS.' column: '504'\", 'confidence': 1.0}, 'tariff_uom': {'value': 'Per Piece', 'explanation': \"Inferred from 'PCS.' column header and rate structure (504 pieces × $5.000 = $2,520.00)\", 'confidence': 0.95}, 'tariff_description': {'value': None, 'explanation': 'No additional descriptive detail text present in a notes/details column for this charge line', 'confidence': 1.0}}], 'explanation': 'Extracted one charge line from the invoice charges table', 'confidence': 1.0}}]"
+          }
+        }
+      }
+    ]
+  },
+  "filename": {
+    "S": "17588dc7-91b2-459e-ad31-353f58e52246_CWE0091698.pdf"
+  },
+  "file_type": {
+    "S": "PDF"
+  },
+  "invoice_date": {
+    "S": "2026-08-24"
+  },
+  "invoice_number": {
+    "S": "CWE0091698"
+  },
+  "mode": {
+    "S": "ROAD"
+  },
+  "output_path": {
+    "S": "s3://nam-pando-prod-delicato-bucket/invoice/output/json/17588dc7-91b2-459e-ad31-353f58e52246_CWE0091698/17588dc7-91b2-459e-ad31-353f58e52246_CWE0091698_Freight_Invoice.json"
+  },
+  "processing_type": {
+    "S": "Invoice"
+  },
+  "s3_path": {
+    "S": "s3://nam-pando-prod-delicato-bucket/invoice/input/17588dc7-91b2-459e-ad31-353f58e52246_CWE0091698.pdf"
+  },
+  "stage_clustering": {
+    "M": {
+      "clusters_found": {
+        "N": "1"
+      },
+      "completed_at": {
+        "S": "2026-08-25T14:28:41.423Z"
+      },
+      "doc_types": {
+        "L": [
+          {
+            "S": "Freight Invoice"
+          }
+        ]
+      },
+      "status": {
+        "S": "COMPLETED"
+      }
+    }
+  },
+  "stage_llm_extraction": {
+    "M": {
+      "completed_at": {
+        "S": "2026-08-25T14:29:44.115Z"
+      },
+      "confidence_score": {
+        "N": "1"
+      },
+      "fields_extracted": {
+        "N": "29"
+      },
+      "status": {
+        "S": "COMPLETED"
+      }
+    }
+  },
+  "stage_textract": {
+    "M": {
+      "bol_clusters": {
+        "N": "0"
+      },
+      "bol_textract_s3_path": {
+        "S": ""
+      },
+      "completed_at": {
+        "S": "2026-08-25T14:29:43.785Z"
+      },
+      "fi_textract_s3_path": {
+        "S": "s3://nam-pando-prod-delicato-bucket/invoice/output/textract/17588dc7-91b2-459e-ad31-353f58e52246_CWE0091698/17588dc7-91b2-459e-ad31-353f58e52246_CWE0091698_0_Freight_Invoice_textract.txt"
+      },
+      "freight_invoice_clusters": {
+        "N": "1"
+      },
+      "skipped_clusters": {
+        "N": "0"
+      },
+      "status": {
+        "S": "COMPLETED"
+      }
+    }
+  },
+  "stage_validation": {
+    "M": {
+      "completed_at": {
+        "S": "2026-08-25T14:29:44.862Z"
+      },
+      "missing_fields": {
+        "L": []
+      },
+      "missing_fields_count": {
+        "N": "0"
+      },
+      "status": {
+        "S": "PASSED"
+      }
+    }
+  },
+  "status": {
+    "S": "COMPLETED"
+  },
+  "type": {
+    "S": "Attachment"
+  },
+  "updated_at": {
+    "N": "1787668184868"
+  },
+  "updated_at_iso": {
+    "S": "2026-08-25T14:29:44.868943"
+  }
+}

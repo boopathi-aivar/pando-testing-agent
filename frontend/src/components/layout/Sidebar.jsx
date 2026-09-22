@@ -1,11 +1,13 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, FolderOpen, BookOpen, Settings, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { LayoutDashboard, FolderOpen, BookOpen, Settings, LogOut, PanelLeftClose, PanelLeftOpen, Activity, Sparkles } from 'lucide-react'
 import { clearAuth, getUser } from '../../api/client'
 import BrandLockup from './BrandLockup'
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/projects', icon: FolderOpen, label: 'Projects' },
+  { to: '/observability', icon: Activity, label: 'Observability' },
+  { to: '/prompt-generator', icon: Sparkles, label: 'Prompt Generator' },
   { to: '/documentation', icon: BookOpen, label: 'Documentation' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]

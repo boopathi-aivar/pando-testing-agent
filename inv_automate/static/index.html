@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Invoice Automate</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg0: #0f1419;
+      --bg1: #1a222c;
+      --bg2: #243040;
+      --line: #334155;
+      --text: #e8eef4;
+      --muted: #94a3b8;
+      --accent: #3d9a7a;
+      --accent-dim: #2a6b55;
+      --warn: #c9a227;
+      --danger: #c45c5c;
+      --radius: 10px;
+      --font: "DM Sans", system-ui, sans-serif;
+      --mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #1e3a32 0%, transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, #1a2838 0%, transparent 50%),
+        var(--bg0);
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    header { margin-bottom: 2rem; }
+    header h1 { margin: 0 0 0.35rem; font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+    header p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    .badge {
+      display: inline-block; margin-top: 0.75rem; padding: 0.2rem 0.55rem;
+      font-size: 0.75rem; font-family: var(--mono); color: var(--accent);
+      border: 1px solid var(--accent-dim); border-radius: 999px;
+      background: rgba(61, 154, 122, 0.08);
+    }
+    .grid { display: grid; gap: 1.25rem; grid-template-columns: 1fr; }
+    @media (min-width: 960px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+      .span-2 { grid-column: 1 / -1; }
+    }
+    section {
+      background: color-mix(in srgb, var(--bg1) 92%, transparent);
+      border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 1.25rem; backdrop-filter: blur(8px);
+    }
+    section h2 {
+      margin: 0 0 1rem; font-size: 0.85rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+    }
+    label { display: block; font-size: 0.85rem; margin-bottom: 0.35rem; color: var(--muted); }
+    input[type="file"], textarea, input[type="text"] {
+      width: 100%; font: inherit; color: var(--text); background: var(--bg0);
+      border: 1px solid var(--line); border-radius: 8px; padding: 0.65rem 0.75rem;
+    }
+    textarea { font-family: var(--mono); font-size: 0.8rem; min-height: 160px; resize: vertical; }
+    .row { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1rem; }
+    button {
+      font-family: var(--font); font-weight: 600; font-size: 0.9rem;
+      border: none; border-radius: 8px; padding: 0.65rem 1.1rem;
+      cursor: pointer; background: var(--accent); color: #06140f;
+    }
+    button:hover { filter: brightness(1.08); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+    button.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
+    button.warn { background: var(--warn); color: #1a1400; }
+    button.danger { background: var(--danger); color: #fff; }
+    .status { margin-top: 0.85rem; font-size: 0.85rem; color: var(--muted); min-height: 1.2em; }
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--accent); }
+    pre, .prompt-box {
+      margin: 0; padding: 0.85rem; overflow: auto; max-height: 280px;
+      font-family: var(--mono); font-size: 0.75rem; line-height: 1.45;
+      background: var(--bg0); border: 1px solid var(--line); border-radius: 8px;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    details.prompt-details { margin-top: 0.75rem; }
+    details.prompt-details summary {
+      cursor: pointer; color: var(--muted); font-size: 0.85rem; margin-bottom: 0.5rem;
+    }
+    .meta {
+      display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.85rem;
+      font-size: 0.8rem; font-family: var(--mono); color: var(--muted);
+    }
+    .meta strong { color: var(--text); font-weight: 500; }
+    .hitl {
+      display: none; margin-top: 1rem; padding: 1rem; border-radius: 8px;
+      border: 1px solid var(--warn); background: rgba(201, 162, 39, 0.08);
+    }
+    .hitl.show { display: block; }
+    .hitl p { margin: 0 0 0.75rem; font-size: 0.9rem; }
+    .chat { display: flex; flex-direction: column; gap: 0.65rem; max-height: 220px; overflow: auto; margin-bottom: 0.75rem; }
+    .bubble { padding: 0.55rem 0.75rem; border-radius: 8px; font-size: 0.88rem; line-height: 1.4; max-width: 95%; }
+    .bubble.user { align-self: flex-end; background: var(--bg2); }
+    .bubble.assistant { align-self: flex-start; background: var(--bg0); border: 1px solid var(--line); }
+
+    .kv-wrap { overflow: auto; max-height: 480px; border: 1px solid var(--line); border-radius: 8px; }
+    table.kv {
+      width: 100%; border-collapse: collapse; font-size: 0.85rem;
+    }
+    table.kv th, table.kv td {
+      border-bottom: 1px solid var(--line); padding: 0.55rem 0.65rem; text-align: left; vertical-align: top;
+    }
+    table.kv th {
+      position: sticky; top: 0; background: var(--bg2); color: var(--muted);
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;
+    }
+    table.kv tr.wrong { background: rgba(196, 92, 92, 0.12); }
+    table.kv .path { font-family: var(--mono); font-size: 0.78rem; color: var(--accent); white-space: nowrap; }
+    table.kv .val { font-family: var(--mono); font-size: 0.78rem; word-break: break-word; }
+    table.kv input[type="checkbox"] { width: auto; transform: scale(1.15); }
+    table.kv input.note {
+      font-size: 0.78rem; padding: 0.35rem 0.5rem; min-width: 140px;
+    }
+    .hint { font-size: 0.8rem; color: var(--muted); margin: 0 0 0.75rem; }
+    .report {
+      margin: 0 0 0.75rem; padding: 0.65rem 0.75rem; border-radius: 8px;
+      border: 1px solid var(--line); background: var(--bg0); font-size: 0.8rem;
+    }
+    .report.ok { border-color: var(--accent-dim); }
+    .report.warn { border-color: rgba(201, 162, 39, 0.55); }
+    .report h3 {
+      margin: 0 0 0.35rem; font-size: 0.72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
+    }
+    .report ul { margin: 0.35rem 0 0; padding-left: 1.1rem; color: var(--muted); }
+    .report li { margin: 0.15rem 0; }
+    .report .diff-box {
+      margin-top: 0.5rem; max-height: 200px; overflow: auto;
+      font-family: var(--mono); font-size: 0.72rem; line-height: 1.4;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .report .diff-add { color: var(--accent); }
+    .report .diff-del { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Invoice Automate</h1>
+      <p>PDF + schema + sample prompt (+ optional field mapping) → extraction guide → review → remap.</p>
+      <span class="badge" id="modelBadge">model: …</span>
+    </header>
+
+    <div class="grid">
+      <section>
+        <h2>1 · Upload</h2>
+        <label for="pdf">PDF invoice <span style="color:var(--danger)">*</span></label>
+        <input id="pdf" type="file" accept="application/pdf,.pdf" />
+        <div style="height: 0.85rem"></div>
+        <label for="schema">JSON schema <span style="color:var(--danger)">*</span></label>
+        <textarea id="schema" spellcheck="false"></textarea>
+        <div style="height: 0.85rem"></div>
+        <label for="samplePrompt">Sample extraction prompt <span style="color:var(--danger)">*</span></label>
+        <p class="hint" style="margin-top:0.25rem">Paste one existing carrier extraction prompt (style reference). Used with the schema to write this session’s guide — not a full prompt library.</p>
+        <textarea id="samplePrompt" spellcheck="false" style="min-height:140px" placeholder="Paste a sample carrier extraction prompt here…"></textarea>
+        <div style="height: 0.85rem"></div>
+        <label for="fieldMapping">Field mapping sheet (optional)</label>
+        <p class="hint" style="margin-top:0.25rem">
+          Optional <strong>.xlsx</strong> with <strong>exactly one sheet</strong>. Schema defines output fields; this sheet adds invoice locations and remarks.
+          Columns only in the sheet (not in the schema) do not change the output shape.
+        </p>
+        <p class="hint" style="margin:0 0 0.5rem;font-family:var(--mono);font-size:0.72rem">
+          Required headers (exact): Table Name | Column Name | Field Location in Actual Invoice | Remarks
+        </p>
+        <input id="fieldMapping" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+        <div class="row">
+          <button type="button" id="loadSample">Load sample schema</button>
+          <button type="button" id="extractBtn">Extract</button>
+        </div>
+        <div class="status" id="uploadStatus"></div>
+      </section>
+
+      <section>
+        <h2>2 · Extraction prompt</h2>
+        <p class="hint">Built from schema + sample style (+ mapping when uploaded). Refined when you submit field feedback.</p>
+        <div id="mappingBadge" class="hint" style="display:none;margin-bottom:0.5rem"></div>
+        <div id="coverageReport" class="report" style="display:none"></div>
+        <div id="mappingReport" class="report" style="display:none"></div>
+        <div id="diffReport" class="report" style="display:none"></div>
+        <div class="prompt-box" id="sessionPrompt">No prompt yet — run Extract.</div>
+      </section>
+
+      <section class="span-2">
+        <h2>3 · Extracted fields</h2>
+        <div class="meta" id="meta"></div>
+        <p class="hint">Mark wrong values, add a short note, and/or write a <strong>generic note</strong> for whole-JSON rules (e.g. null→empty string). Then refine &amp; remap.</p>
+        <label for="genericNote">Generic note (applies to entire result)</label>
+        <textarea id="genericNote" style="min-height:72px;margin-bottom:0.85rem" placeholder="Example: Transform all null values to empty strings. Unwrap value/explanation/confidence to bare values."></textarea>
+        <div class="kv-wrap">
+          <table class="kv" id="kvTable">
+            <thead>
+              <tr>
+                <th>Wrong?</th>
+                <th>Field</th>
+                <th>Value</th>
+                <th>Feedback note</th>
+              </tr>
+            </thead>
+            <tbody id="kvBody">
+              <tr><td colspan="4" style="color:var(--muted)">No extraction yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="row">
+          <button type="button" id="correctBtn" disabled>Refine prompt &amp; remap</button>
+          <button type="button" class="warn" id="voluntaryDocling" disabled>Retry with Docling</button>
+          <button type="button" class="secondary" id="toggleJson">Show JSON</button>
+        </div>
+        <p class="hint" id="doclingHint" style="margin-top:0.5rem">
+          Optional: re-OCR the PDF with Docling and re-extract (slower, better on scanned pages).
+        </p>
+        <details class="prompt-details" id="jsonDetails" style="display:none;margin-top:0.75rem">
+          <summary>Raw JSON</summary>
+          <pre id="result">{}</pre>
+        </details>
+        <div class="hitl" id="hitl">
+          <p id="hitlMsg">Accuracy is low. Retry with Docling?</p>
+          <div class="row">
+            <button type="button" class="warn" id="retryDocling">Retry with Docling</button>
+            <button type="button" class="secondary" id="skipRetry">Continue as-is</button>
+          </div>
+        </div>
+        <div class="status" id="correctStatus"></div>
+      </section>
+
+      <section class="span-2">
+        <h2>4 · Ask about the invoice</h2>
+        <div class="chat" id="chat"></div>
+        <label for="prompt">Question</label>
+        <input id="prompt" type="text" placeholder="What is the invoice total?" disabled />
+        <div class="row">
+          <button type="button" id="askBtn" disabled>Ask</button>
+        </div>
+        <div class="status" id="promptStatus"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const SAMPLE_SCHEMA = {
+      type: "object",
+      properties: {
+        invoice_number: { type: ["string", "null"], description: "Invoice # / Invoice No. near header" },
+        invoice_date: { type: ["string", "null"], description: "ISO date if possible" },
+        vendor_name: { type: ["string", "null"] },
+        total_amount: { type: ["number", "null"], description: "Grand total / amount due — not a subtotal" },
+        currency: { type: ["string", "null"] },
+        bill_to: { type: ["string", "null"] },
+        line_items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              description: { type: ["string", "null"] },
+              amount: { type: ["number", "null"] }
+            }
+          }
+        }
+      },
+      required: ["invoice_number", "total_amount"]
+    };
+
+    let threadId = null;
+    let lastFields = [];
+
+    const $ = (id) => document.getElementById(id);
+
+    function fmtVal(v) {
+      if (v === null || v === undefined) return "null";
+      if (typeof v === "object") return JSON.stringify(v);
+      return String(v);
+    }
+
+    async function refreshHealth() {
+      try {
+        const r = await fetch("/api/health");
+        const j = await r.json();
+        const label = j.model || "unknown";
+        const prov = j.provider ? j.provider + " · " : "";
+        $("modelBadge").textContent = prov + label;
+      } catch {
+        $("modelBadge").textContent = "model: offline";
+      }
+    }
+
+    function setUploadStatus(msg, kind) {
+      const el = $("uploadStatus");
+      el.textContent = msg || "";
+      el.className = "status" + (kind ? " " + kind : "");
+    }
+
+    function renderFields(fields) {
+      lastFields = fields || [];
+      const body = $("kvBody");
+      body.innerHTML = "";
+      if (!lastFields.length) {
+        body.innerHTML = '<tr><td colspan="4" style="color:var(--muted)">No fields.</td></tr>';
+        return;
+      }
+      for (const row of lastFields) {
+        const tr = document.createElement("tr");
+        tr.dataset.path = row.path;
+        tr.innerHTML = `
+          <td><input type="checkbox" class="wrong-cb" /></td>
+          <td class="path"></td>
+          <td class="val"></td>
+          <td><input type="text" class="note" placeholder="What’s wrong / correct value hint" disabled /></td>
+        `;
+        tr.querySelector(".path").textContent = row.path;
+        tr.querySelector(".val").textContent = fmtVal(row.value);
+        tr.querySelector(".val").dataset.raw = JSON.stringify(row.value);
+        const cb = tr.querySelector(".wrong-cb");
+        const note = tr.querySelector(".note");
+        cb.addEventListener("change", () => {
+          tr.classList.toggle("wrong", cb.checked);
+          note.disabled = !cb.checked;
+          if (!cb.checked) note.value = "";
+        });
+        body.appendChild(tr);
+      }
+    }
+
+    function renderCoverage(cov) {
+      const el = $("coverageReport");
+      if (!cov) { el.style.display = "none"; return; }
+      el.style.display = "block";
+      el.className = "report " + (cov.ok ? "ok" : "warn");
+      const missing = cov.missing || [];
+      let html = `<h3>Schema field coverage</h3>`;
+      html += `<div>${cov.covered?.length || 0}/${cov.total_fields || 0} schema fields mentioned in prompt`;
+      if (cov.coverage_ratio != null) html += ` (${Math.round(cov.coverage_ratio * 100)}%)`;
+      html += `.</div>`;
+      if (missing.length) {
+        html += `<ul>` + missing.map((f) => `<li>Missing: <code>${esc(f)}</code></li>`).join("") + `</ul>`;
+      } else {
+        html += `<div style="margin-top:0.35rem;color:var(--accent)">All schema fields appear in the prompt.</div>`;
+      }
+      el.innerHTML = html;
+    }
+
+    function renderMappingMatch(mm) {
+      const el = $("mappingReport");
+      if (!mm || !mm.has_mapping) {
+        el.style.display = "none";
+        return;
+      }
+      el.style.display = "block";
+      const noMap = mm.schema_fields_with_no_mapping || [];
+      const extra = mm.mapping_fields_not_in_schema || [];
+      const noLoc = mm.schema_fields_mapped_without_location || [];
+      const hasIssues = noMap.length || extra.length || noLoc.length;
+      el.className = "report " + (hasIssues ? "warn" : "ok");
+      let html = `<h3>Schema ↔ mapping</h3><div>${esc(mm.summary || "")}</div><ul>`;
+      if (noMap.length) {
+        html += noMap.map((f) => `<li>Schema field with no mapping row: <code>${esc(f)}</code></li>`).join("");
+      }
+      if (noLoc.length) {
+        html += noLoc.map((f) => `<li>Mapped but no location: <code>${esc(f)}</code></li>`).join("");
+      }
+      if (extra.length) {
+        html += extra.map((f) => `<li>In mapping, not in schema: <code>${esc(f)}</code></li>`).join("");
+      }
+      if (!hasIssues) {
+        html += `<li style="color:var(--accent)">Schema and mapping columns align.</li>`;
+      }
+      html += `</ul>`;
+      el.innerHTML = html;
+    }
+
+    function renderPromptDiff(diff) {
+      const el = $("diffReport");
+      if (!diff || !diff.changed) {
+        el.style.display = "none";
+        return;
+      }
+      el.style.display = "block";
+      el.className = "report ok";
+      const st = diff.stats || {};
+      let html = `<h3>Prompt changes (after feedback)</h3>`;
+      html += `<div>+${st.lines_added || 0} / −${st.lines_removed || 0} lines</div>`;
+      const raw = diff.unified_diff || "";
+      if (raw) {
+        const colored = raw.split("\n").map((line) => {
+          const t = esc(line);
+          if (line.startsWith("+") && !line.startsWith("+++")) return `<span class="diff-add">${t}</span>`;
+          if (line.startsWith("-") && !line.startsWith("---")) return `<span class="diff-del">${t}</span>`;
+          return t;
+        }).join("\n");
+        html += `<div class="diff-box">${colored}</div>`;
+      }
+      el.innerHTML = html;
+    }
+
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function renderResult(data) {
+      threadId = data.thread_id;
+      const acc = data.accuracy_score != null ? Number(data.accuracy_score).toFixed(3) : "—";
+      $("meta").innerHTML = [
+        `<span>status: <strong>${data.status}</strong></span>`,
+        `<span>accuracy: <strong>${acc}</strong></span>`,
+        `<span>docling: <strong>${data.used_docling ? "yes" : "no"}</strong></span>`,
+        `<span>thread: <strong>${data.thread_id}</strong></span>`,
+      ].join("");
+
+      $("sessionPrompt").textContent = data.session_prompt || "(empty)";
+      const mb = $("mappingBadge");
+      if (data.field_mapping_used) {
+        mb.style.display = "block";
+        mb.textContent = `Field mapping used (${data.field_mapping_row_count || "?"} rows). Schema still defines output fields.`;
+      } else {
+        mb.style.display = "block";
+        mb.textContent = "No field mapping uploaded — prompt built from schema + sample only.";
+      }
+      renderCoverage(data.prompt_coverage);
+      renderMappingMatch(data.mapping_match);
+      renderPromptDiff(data.prompt_diff);
+      $("result").textContent = JSON.stringify(data.extracted_json || {}, null, 2);
+      renderFields(data.fields || []);
+
+      const awaiting = data.status === "awaiting_feedback";
+      $("hitl").classList.toggle("show", awaiting);
+      if (awaiting && data.feedback) {
+        $("hitlMsg").textContent =
+          (data.feedback.message || "Low accuracy.") +
+          ` (score ${data.accuracy_score})`;
+      }
+
+      const ready = data.status === "completed" || data.status === "awaiting_feedback";
+      $("prompt").disabled = !ready || !!data.fatal_error;
+      $("askBtn").disabled = !ready || !!data.fatal_error;
+      $("correctBtn").disabled = !ready || !!data.fatal_error;
+      $("voluntaryDocling").disabled = !ready || !!data.fatal_error;
+      $("genericNote").disabled = !ready || !!data.fatal_error;
+
+      if (Array.isArray(data.chat_history)) renderChat(data.chat_history);
+    }
+
+    function renderChat(history) {
+      const box = $("chat");
+      box.innerHTML = "";
+      for (const turn of history) {
+        const u = document.createElement("div");
+        u.className = "bubble user";
+        u.textContent = turn.user || "";
+        box.appendChild(u);
+        const a = document.createElement("div");
+        a.className = "bubble assistant";
+        a.textContent = turn.assistant || "";
+        box.appendChild(a);
+      }
+      box.scrollTop = box.scrollHeight;
+    }
+
+    $("loadSample").onclick = () => {
+      $("schema").value = JSON.stringify(SAMPLE_SCHEMA, null, 2);
+    };
+
+    $("toggleJson").onclick = () => {
+      const d = $("jsonDetails");
+      d.style.display = d.style.display === "none" ? "block" : "none";
+    };
+
+    $("extractBtn").onclick = async () => {
+      const file = $("pdf").files[0];
+      const schemaText = $("schema").value.trim();
+      const samplePrompt = ($("samplePrompt").value || "").trim();
+      if (!file) { setUploadStatus("Choose a PDF first.", "error"); return; }
+      if (!schemaText) { setUploadStatus("Paste or load a JSON schema.", "error"); return; }
+      if (!samplePrompt) {
+        setUploadStatus(
+          "Paste a sample carrier extraction prompt (style reference).",
+          "error"
+        );
+        return;
+      }
+      let schemaObj;
+      try { schemaObj = JSON.parse(schemaText); }
+      catch { setUploadStatus("Schema is not valid JSON.", "error"); return; }
+
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("schema", JSON.stringify(schemaObj));
+      fd.append("sample_prompt", samplePrompt);
+      const mappingFile = $("fieldMapping").files[0];
+      if (mappingFile) {
+        if (!mappingFile.name.toLowerCase().endsWith(".xlsx")) {
+          setUploadStatus("Field mapping must be a .xlsx file.", "error");
+          return;
+        }
+        fd.append("field_mapping", mappingFile);
+      }
+
+      $("extractBtn").disabled = true;
+      setUploadStatus(
+        mappingFile
+          ? "Generating prompt from schema + sample + field mapping, then extracting…"
+          : "Generating prompt from schema + sample, then extracting…",
+        ""
+      );
+      try {
+        const r = await fetch("/api/v1/invoice/extract", { method: "POST", body: fd });
+        const j = await r.json();
+        if (!r.ok) throw new Error(typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail));
+        renderResult(j);
+        setUploadStatus(
+          j.fatal_error ? "Finished with error." : "Done — review fields below.",
+          j.fatal_error ? "error" : "ok"
+        );
+      } catch (e) {
+        setUploadStatus(String(e.message || e), "error");
+      } finally {
+        $("extractBtn").disabled = false;
+      }
+    };
+
+    $("correctBtn").onclick = async () => {
+      if (!threadId) return;
+      const corrections = [];
+      for (const tr of $("kvBody").querySelectorAll("tr[data-path]")) {
+        const cb = tr.querySelector(".wrong-cb");
+        if (!cb || !cb.checked) continue;
+        let current = null;
+        try { current = JSON.parse(tr.querySelector(".val").dataset.raw); } catch { current = tr.querySelector(".val").textContent; }
+        corrections.push({
+          path: tr.dataset.path,
+          current_value: current,
+          note: (tr.querySelector(".note").value || "").trim(),
+        });
+      }
+      const genericNote = ($("genericNote").value || "").trim();
+      if (!corrections.length && !genericNote) {
+        $("correctStatus").textContent = "Mark a wrong field or enter a generic note.";
+        $("correctStatus").className = "status error";
+        return;
+      }
+
+      $("correctBtn").disabled = true;
+      $("correctStatus").textContent = "Refining prompt & remapping…";
+      $("correctStatus").className = "status";
+      try {
+        const r = await fetch("/api/v1/invoice/correct", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            thread_id: threadId,
+            corrections,
+            generic_note: genericNote,
+            refine_prompt: true,
+          }),
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail));
+        renderResult(j);
+        $("correctStatus").textContent = "Updated from your feedback.";
+        $("correctStatus").className = "status ok";
+      } catch (e) {
+        $("correctStatus").textContent = String(e.message || e);
+        $("correctStatus").className = "status error";
+      } finally {
+        $("correctBtn").disabled = false;
+      }
+    };
+
+    async function runDoclingRetry() {
+      if (!threadId) return;
+      $("voluntaryDocling").disabled = true;
+      $("retryDocling").disabled = true;
+      $("skipRetry").disabled = true;
+      $("correctStatus").textContent = "Running Docling OCR & re-extracting…";
+      $("correctStatus").className = "status";
+      setUploadStatus("Running Docling OCR & re-extracting…", "");
+      try {
+        const r = await fetch("/api/v1/invoice/docling-retry", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ thread_id: threadId }),
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail));
+        renderResult(j);
+        const msg = j.used_docling
+          ? "Docling re-extract finished."
+          : (j.validation_errors && j.validation_errors.length
+              ? j.validation_errors[j.validation_errors.length - 1]
+              : "Docling finished (see validation errors if any).");
+        $("correctStatus").textContent = msg;
+        $("correctStatus").className = "status " + (j.used_docling && !j.fatal_error ? "ok" : "error");
+        setUploadStatus(msg, j.used_docling && !j.fatal_error ? "ok" : "error");
+      } catch (e) {
+        $("correctStatus").textContent = String(e.message || e);
+        $("correctStatus").className = "status error";
+        setUploadStatus(String(e.message || e), "error");
+      } finally {
+        $("voluntaryDocling").disabled = false;
+        $("retryDocling").disabled = false;
+        $("skipRetry").disabled = false;
+      }
+    }
+
+    async function sendFeedback(retry) {
+      if (!threadId) return;
+      if (retry) {
+        await runDoclingRetry();
+        return;
+      }
+      $("retryDocling").disabled = true;
+      $("skipRetry").disabled = true;
+      $("voluntaryDocling").disabled = true;
+      setUploadStatus("Continuing without Docling…", "");
+      try {
+        const r = await fetch("/api/v1/invoice/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ thread_id: threadId, retry: false }),
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.detail || r.statusText);
+        renderResult(j);
+        setUploadStatus("Updated.", "ok");
+      } catch (e) {
+        setUploadStatus(String(e.message || e), "error");
+      } finally {
+        $("retryDocling").disabled = false;
+        $("skipRetry").disabled = false;
+        $("voluntaryDocling").disabled = false;
+      }
+    }
+
+    $("voluntaryDocling").onclick = () => runDoclingRetry();
+    $("retryDocling").onclick = () => sendFeedback(true);
+    $("skipRetry").onclick = () => sendFeedback(false);
+
+    $("askBtn").onclick = async () => {
+      const prompt = $("prompt").value.trim();
+      if (!prompt || !threadId) return;
+      $("askBtn").disabled = true;
+      $("promptStatus").textContent = "Thinking…";
+      try {
+        const r = await fetch("/api/v1/invoice/prompt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ thread_id: threadId, prompt }),
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.detail || r.statusText);
+        renderChat(j.chat_history || []);
+        $("prompt").value = "";
+        $("promptStatus").textContent = "";
+      } catch (e) {
+        $("promptStatus").textContent = String(e.message || e);
+        $("promptStatus").className = "status error";
+      } finally {
+        $("askBtn").disabled = false;
+      }
+    };
+
+    $("prompt").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") $("askBtn").click();
+    });
+
+    $("loadSample").click();
+    refreshHealth();
+  </script>
+</body>
+</html>

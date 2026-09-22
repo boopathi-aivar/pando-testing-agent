@@ -20,6 +20,65 @@ class Settings:
     INTAKE_API_KEY: str        = os.getenv("INTAKE_API_KEY",        "change-me-intake-secret")
     BEDROCK_MODEL_ID: str      = os.getenv("BEDROCK_MODEL_ID",      "us.anthropic.claude-sonnet-4-6")
 
+    # ── Observability: shared scan/cache settings ─────────────────────────────
+    DELICATO_AWS_REGION: str = os.getenv("DELICATO_AWS_REGION", "us-east-1")
+    DELICATO_CACHE_TTL_SECONDS: int = int(os.getenv("DELICATO_CACHE_TTL_SECONDS", "300"))
+    DELICATO_SCAN_SEGMENTS: int = int(os.getenv("DELICATO_SCAN_SEGMENTS", "32"))
+
+    # Optional GSI for list/cache (Query instead of full table Scan).
+    # Requires index on the log tables, e.g. PK=type SK=created_at_iso.
+    # Leave empty to use parallel Scan with ProjectionExpression.
+    OBSERVABILITY_LIST_GSI: str = os.getenv("OBSERVABILITY_LIST_GSI", "")
+    OBSERVABILITY_LIST_GSI_PK: str = os.getenv("OBSERVABILITY_LIST_GSI_PK", "type")
+    OBSERVABILITY_LIST_GSI_PK_VALUE: str = os.getenv(
+        "OBSERVABILITY_LIST_GSI_PK_VALUE", "Attachment"
+    )
+    OBSERVABILITY_LIST_GSI_SK: str = os.getenv(
+        "OBSERVABILITY_LIST_GSI_SK", "created_at_iso"
+    )
+
+    # Ops-account log tables (same Secrets Manager session as Delicato).
+    DELICATO_LOG_TABLE: str = os.getenv("DELICATO_LOG_TABLE", "pando-delicato-log-tmp")
+    GE_LOG_TABLE: str = os.getenv("GE_LOG_TABLE", "pando-general-electronics-logs-temp")
+    JNJ_LOG_TABLE: str = os.getenv("JNJ_LOG_TABLE", "jnj_logs")
+    OTTER_LOG_TABLE: str = os.getenv("OTTER_LOG_TABLE", "pando-otter-logs")
+    GHENT_LOG_TABLE: str = os.getenv("GHENT_LOG_TABLE", "pando-ghent-log-temp")
+    WEST_MARINE_LOG_TABLE: str = os.getenv(
+        "WEST_MARINE_LOG_TABLE", "pando-west-marine-logs"
+    )
+    VIKING_LOG_TABLE: str = os.getenv("VIKING_LOG_TABLE", "pando-viking-log")
+    UNILEVER_LOG_TABLE: str = os.getenv(
+        "UNILEVER_LOG_TABLE", "Pando-Unilever-Logs-Temp"
+    )
+    UNILEVER_EXCEL_LOG_TABLE: str = os.getenv(
+        "UNILEVER_EXCEL_LOG_TABLE", "unilever-excel-demo"
+    )
+
+    # Cross-account DynamoDB for Observability (ops account tables).
+    # Secret lives in THIS account; value holds the OTHER account's IAM keys.
+    # Leave OBSERVABILITY_DDB_SECRET_NAME empty to use make_aws_session() instead.
+    OBSERVABILITY_DDB_SECRET_NAME: str = os.getenv(
+        "OBSERVABILITY_DDB_SECRET_NAME",
+        "invoice-testing-agent/observability-dynamodb-secrets",
+    )
+    # Region where the Secrets Manager secret itself is stored.
+    OBSERVABILITY_DDB_SECRET_REGION: str = os.getenv(
+        "OBSERVABILITY_DDB_SECRET_REGION", "us-east-1"
+    )
+    # Region of the Observability DynamoDB tables (defaults to DELICATO_AWS_REGION).
+    OBSERVABILITY_DDB_REGION: str = (
+        os.getenv("OBSERVABILITY_DDB_REGION", "") or DELICATO_AWS_REGION
+    )
+
+    # ── Observability: Meta (Account B) ────────────────────────────────────────
+    META_LOG_TABLE: str = os.getenv("META_LOG_TABLE", "")
+    META_DDB_SECRET_NAME: str = os.getenv(
+        "META_DDB_SECRET_NAME",
+        "invoice-testing-agent/observability-dynamodb-secrets-meta",
+    )
+    META_DDB_SECRET_REGION: str = os.getenv("META_DDB_SECRET_REGION", "us-east-1")
+    META_DDB_REGION: str = os.getenv("META_DDB_REGION", "us-east-1")
+
     # ── Cross-account source (S3 + CloudWatch live in a different AWS account) ──
     # Name of the Secrets Manager secret (in THIS account) holding the other
     # account's IAM user access key/secret key. Leave unset to use this
@@ -66,17 +125,16 @@ def make_aws_session() -> boto3.Session:
     )
 
 
-# ── Cross-account session (S3 / CloudWatch in another AWS account) ───────────
-# Cached at module level so we only call Secrets Manager once per warm Lambda
-# container, not on every S3/CloudWatch call.
-_source_session_cache: dict = {"session": None, "fetched_at": 0.0}
-_SOURCE_SESSION_TTL_SECONDS = 15 * 60  # re-fetch every 15 min in case the secret rotates
+# ── Cross-account sessions (Secrets Manager → other-account IAM keys) ────────
+# Cached per secret id so we only call Secrets Manager periodically.
+_SECRET_SESSION_TTL_SECONDS = 15 * 60
+_secret_session_cache: dict[str, dict] = {}
 
 
-def _fetch_source_credentials() -> dict:
-    """Fetch {access_key_id, secret_access_key} from Secrets Manager."""
-    client = make_aws_session().client("secretsmanager")
-    resp = client.get_secret_value(SecretId=settings.SOURCE_ACCOUNT_SECRET_NAME)
+def _fetch_secret_credentials(secret_id: str, *, secrets_region: str) -> dict:
+    """Fetch {access_key_id, secret_access_key, session_token} from Secrets Manager."""
+    client = make_aws_session().client("secretsmanager", region_name=secrets_region)
+    resp = client.get_secret_value(SecretId=secret_id)
     secret = json.loads(resp["SecretString"])
     return {
         "access_key_id":     secret["AWS_ACCESS_KEY_ID"],
@@ -85,26 +143,27 @@ def _fetch_source_credentials() -> dict:
     }
 
 
-def _source_creds_from_env() -> dict | None:
-    """Pando IAM keys pasted into .env for local testing."""
-    key = (settings.SOURCE_AWS_ACCESS_KEY_ID or "").strip()
-    secret = (settings.SOURCE_AWS_SECRET_ACCESS_KEY or "").strip()
-    if not key or not secret:
-        return None
-    return {
-        "access_key_id":     key,
-        "secret_access_key": secret,
-        "session_token":     (settings.SOURCE_AWS_SESSION_TOKEN or "").strip(),
-    }
+def _session_from_secret(
+    secret_id: str,
+    *,
+    secrets_region: str,
+    session_region: str,
+) -> boto3.Session:
+    """Build (and cache) a boto3 Session from a Secrets Manager credential secret."""
+    now = time.time()
+    cached = _secret_session_cache.get(secret_id)
+    if cached is not None and now - cached["fetched_at"] < _SECRET_SESSION_TTL_SECONDS:
+        return cached["session"]
 
-
-def _session_from_source_creds(creds: dict) -> boto3.Session:
-    return boto3.Session(
+    creds = _fetch_secret_credentials(secret_id, secrets_region=secrets_region)
+    session = boto3.Session(
         aws_access_key_id     = creds["access_key_id"],
         aws_secret_access_key = creds["secret_access_key"],
         aws_session_token     = creds.get("session_token") or None,
-        region_name           = settings.SOURCE_ACCOUNT_REGION,
+        region_name           = session_region,
     )
+    _secret_session_cache[secret_id] = {"session": session, "fetched_at": now}
+    return session
 
 
 def make_source_aws_session() -> boto3.Session:
@@ -125,18 +184,28 @@ def make_source_aws_session() -> boto3.Session:
     if not settings.SOURCE_ACCOUNT_SECRET_NAME:
         return make_aws_session()
 
-    now = time.time()
-    if (
-        _source_session_cache["session"] is not None
-        and now - _source_session_cache["fetched_at"] < _SOURCE_SESSION_TTL_SECONDS
-    ):
-        return _source_session_cache["session"]
+    return _session_from_secret(
+        settings.SOURCE_ACCOUNT_SECRET_NAME,
+        secrets_region=settings.SOURCE_ACCOUNT_REGION or settings.AWS_REGION,
+        session_region=settings.SOURCE_ACCOUNT_REGION,
+    )
 
-    creds = _fetch_source_credentials()
-    session = _session_from_source_creds(creds)
-    _source_session_cache["session"]    = session
-    _source_session_cache["fetched_at"] = now
-    return session
+
+def make_observability_ddb_session() -> boto3.Session:
+    """
+    Return a boto3 Session for Observability DynamoDB tables in the ops account.
+
+    Uses OBSERVABILITY_DDB_SECRET_NAME (Secrets Manager in this account).
+    Falls back to make_aws_session() when the secret name is unset.
+    """
+    if not settings.OBSERVABILITY_DDB_SECRET_NAME:
+        return make_aws_session()
+
+    return _session_from_secret(
+        settings.OBSERVABILITY_DDB_SECRET_NAME,
+        secrets_region=settings.OBSERVABILITY_DDB_SECRET_REGION,
+        session_region=settings.OBSERVABILITY_DDB_REGION,
+    )
 
 
 def _classify_sts_error(exc: Exception) -> str:

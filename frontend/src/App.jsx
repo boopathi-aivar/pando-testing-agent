@@ -10,6 +10,9 @@ import SettingsPage from './pages/Settings'
 import Projects from './pages/Projects'
 import Documentation from './pages/Documentation'
 import DocumentationDetail from './pages/DocumentationDetail'
+import ObservabilityHome from './pages/ObservabilityHome'
+import ObservabilityProject from './pages/ObservabilityProject'
+import PromptGenerator from './pages/PromptGenerator'
 import { getToken } from './api/client'
 
 const SIDEBAR_KEY = 'pando_sidebar_open'
@@ -20,7 +23,7 @@ function PrivateRoute({ children }) {
   return getToken() ? children : <Navigate to="/login" replace />
 }
 
-function Layout({ title, children }) {
+function Layout({ title, children, fullBleed = false }) {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
       const stored = localStorage.getItem(SIDEBAR_KEY)
@@ -49,9 +52,15 @@ function Layout({ title, children }) {
         className="pt-16 min-h-screen bg-background transition-[margin] duration-200 ease-out"
         style={{ marginLeft: offset }}
       >
-        <div className="w-full max-w-[1680px] mx-auto px-8 py-8">
-          {children}
-        </div>
+        {fullBleed ? (
+          <div className="w-full px-4 py-3 flex flex-col" style={{ height: 'calc(100vh - 3.5rem)' }}>
+            {children}
+          </div>
+        ) : (
+          <div className="w-full max-w-[1680px] mx-auto px-8 py-8">
+            {children}
+          </div>
+        )}
       </main>
     </div>
   )
@@ -68,6 +77,9 @@ export default function App() {
         <Route path="/project/:projectId/results" element={<PrivateRoute><Layout title="Test Results"><Results /></Layout></PrivateRoute>} />
         <Route path="/documentation" element={<PrivateRoute><Layout title="Documentation"><Documentation /></Layout></PrivateRoute>} />
         <Route path="/documentation/:docId" element={<PrivateRoute><Layout title="Documentation"><DocumentationDetail /></Layout></PrivateRoute>} />
+        <Route path="/observability" element={<PrivateRoute><Layout title="Observability"><ObservabilityHome /></Layout></PrivateRoute>} />
+        <Route path="/observability/:projectId" element={<PrivateRoute><Layout title="Observability" fullBleed><ObservabilityProject /></Layout></PrivateRoute>} />
+        <Route path="/prompt-generator" element={<PrivateRoute><Layout title="Prompt Generator"><PromptGenerator /></Layout></PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute><Layout title="Settings"><SettingsPage /></Layout></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

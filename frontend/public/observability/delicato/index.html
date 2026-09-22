@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Delicato Invoice Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="header-brand">
+        <span class="brand-dot"></span>
+        <span class="brand-name" id="brandName">Delicato Invoice Processing</span>
+      </div>
+      <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">&#8635; Refresh</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Summary Cards -->
+    <section class="cards" id="statsCards">
+      <div class="card" id="card-total">
+        <div class="card-label">Total</div>
+        <div class="card-value" id="stat-total">—</div>
+      </div>
+      <div class="card card-green" id="card-completed">
+        <div class="card-label">Completed</div>
+        <div class="card-value" id="stat-completed">—</div>
+      </div>
+      <div class="card card-yellow" id="card-processing">
+        <div class="card-label">Processing / Queued</div>
+        <div class="card-value" id="stat-processing">—</div>
+      </div>
+      <div class="card card-red" id="card-failed">
+        <div class="card-label">Failed</div>
+        <div class="card-value" id="stat-failed">—</div>
+      </div>
+      <div class="card card-orange" id="card-rejected">
+        <div class="card-label">Rejected</div>
+        <div class="card-value" id="stat-rejected">—</div>
+      </div>
+    </section>
+
+    <!-- Filters -->
+    <section class="filters">
+      <div class="filter-group custom-select-group" id="statusSelectGroup">
+        <label>Status</label>
+        <button type="button" class="custom-select-trigger" id="statusSelectTrigger"
+          onclick="toggleCustomSelect('status', event)" aria-haspopup="listbox" aria-expanded="false">
+          <span class="custom-select-label" id="statusSelectLabel">All Statuses</span>
+          <svg class="custom-select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+        <div class="custom-select-menu" id="statusSelectMenu" role="listbox" hidden>
+          <button type="button" class="custom-select-option selected" data-value=""
+            onclick="pickCustomSelect('status', '', 'All Statuses')">All Statuses</button>
+        </div>
+      </div>
+
+      <div class="filter-group custom-select-group" id="carrierSelectGroup">
+        <label>Carrier</label>
+        <button type="button" class="custom-select-trigger" id="carrierSelectTrigger"
+          onclick="toggleCustomSelect('carrier', event)" aria-haspopup="listbox" aria-expanded="false">
+          <span class="custom-select-label" id="carrierSelectLabel">All Carriers</span>
+          <svg class="custom-select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+        <div class="custom-select-menu" id="carrierSelectMenu" role="listbox" hidden>
+          <button type="button" class="custom-select-option selected" data-value=""
+            onclick="pickCustomSelect('carrier', '', 'All Carriers')">All Carriers</button>
+        </div>
+      </div>
+
+      <div class="filter-group" id="invoiceNoFilterGroup">
+        <label for="invoiceNoInput">Invoice No</label>
+        <input type="search" id="invoiceNoInput" placeholder="Search invoice no…"
+          autocomplete="off" oninput="onInvoiceNoInput()" />
+      </div>
+
+      <div class="filter-group filter-right time-filter-group">
+        <label>Created</label>
+        <div class="time-chip-bar" id="timeChipBar">
+          <button type="button" class="time-chip" data-preset="" onclick="applyTimePreset('', this)">Clear</button>
+          <button type="button" class="time-chip" data-preset="1h" onclick="applyTimePreset('1h', this)">1h</button>
+          <button type="button" class="time-chip" data-preset="12h" onclick="applyTimePreset('12h', this)">12h</button>
+          <button type="button" class="time-chip" data-preset="1d" onclick="applyTimePreset('1d', this)">1d</button>
+          <button type="button" class="time-chip" data-preset="3d" onclick="applyTimePreset('3d', this)">3d</button>
+          <button type="button" class="time-chip" data-preset="7d" onclick="applyTimePreset('7d', this)">7d</button>
+          <button type="button" class="time-chip time-chip-custom" id="timeCustomBtn" onclick="toggleTimePopover(event)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+            </svg>
+            Custom
+          </button>
+        </div>
+        <div class="time-active-label" id="timeActiveLabel">All time</div>
+
+        <div class="time-popover" id="timePopover" hidden>
+          <div class="time-mode-toggle">
+            <button type="button" class="time-mode-btn active" data-mode="relative" onclick="setTimePopoverMode('relative')">Relative</button>
+            <button type="button" class="time-mode-btn" data-mode="absolute" onclick="setTimePopoverMode('absolute')">Absolute</button>
+          </div>
+
+          <div id="timeRelativePane">
+            <div class="time-preset-row">
+              <span class="time-preset-label">Minutes</span>
+              <div class="time-preset-btns">
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(5,'m')">5</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(10,'m')">10</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(15,'m')">15</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(30,'m')">30</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(45,'m')">45</button>
+              </div>
+            </div>
+            <div class="time-preset-row">
+              <span class="time-preset-label">Hours</span>
+              <div class="time-preset-btns">
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(1,'h')">1</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(2,'h')">2</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(3,'h')">3</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(6,'h')">6</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(8,'h')">8</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(12,'h')">12</button>
+              </div>
+            </div>
+            <div class="time-preset-row">
+              <span class="time-preset-label">Days</span>
+              <div class="time-preset-btns">
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(1,'d')">1</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(2,'d')">2</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(3,'d')">3</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(4,'d')">4</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(5,'d')">5</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(6,'d')">6</button>
+              </div>
+            </div>
+            <div class="time-preset-row">
+              <span class="time-preset-label">Weeks</span>
+              <div class="time-preset-btns">
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(1,'w')">1</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(2,'w')">2</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(3,'w')">3</button>
+                <button type="button" class="time-preset-btn" onclick="selectRelativeDraft(4,'w')">4</button>
+              </div>
+            </div>
+            <div class="time-duration-row">
+              <div>
+                <label for="relDuration">Duration</label>
+                <input type="number" id="relDuration" min="1" max="9999" placeholder="15" />
+                <p class="time-hint">Up to 4 digits.</p>
+              </div>
+              <div>
+                <label for="relUnit">Unit of time</label>
+                <select id="relUnit">
+                  <option value="m">Minutes</option>
+                  <option value="h">Hours</option>
+                  <option value="d">Days</option>
+                  <option value="w">Weeks</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="timeAbsolutePane" hidden>
+            <div class="time-absolute-row">
+              <div>
+                <label for="absFrom">From</label>
+                <input type="datetime-local" id="absFrom" />
+              </div>
+              <div>
+                <label for="absTo">To</label>
+                <input type="datetime-local" id="absTo" />
+              </div>
+            </div>
+          </div>
+
+          <div class="time-popover-footer">
+            <button type="button" class="time-btn-outline" onclick="clearTimeFilter()">Clear</button>
+            <div class="time-footer-right">
+              <button type="button" class="time-btn-text" onclick="closeTimePopover()">Cancel</button>
+              <button type="button" class="time-btn-apply" onclick="applyTimePopover()">Apply</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section class="table-section">
+      <div class="table-wrap">
+        <table id="invoiceTable">
+          <thead>
+            <tr>
+              <th>Invoice No</th>
+              <th>Carrier</th>
+              <th>Invoice Date</th>
+              <th>Status</th>
+              <th>Created At</th>
+              <th>Error</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="7" class="loading">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination" id="pagination"></div>
+    </section>
+
+  </main>
+
+  <!-- Detail Modal -->
+  <div class="modal-backdrop" id="modalBackdrop" onclick="closeModal()"></div>
+  <div class="modal" id="detailModal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Invoice Detail</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

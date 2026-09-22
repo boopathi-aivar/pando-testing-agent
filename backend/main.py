@@ -1,13 +1,27 @@
 import os
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import auth, projects, results, jobs, intake, dashboard, docprojects
+from routers import auth, projects, results, jobs, intake, dashboard, docprojects, observability
+from routers import prompt_generator as prompt_generator_router
 from database import check_connection, ensure_tables
 from config import check_aws_credentials
 from seed import seed_if_empty
+
+
+def _warm_observability_cache() -> None:
+    """Full table scans — run off the startup path so the API can accept traffic."""
+    try:
+        from services.observability_logs import warm_cache
+        print("\n  Observability cache warm started in background...\n")
+        warm_cache()
+        print("\n  Observability cache warm finished.\n")
+    except Exception as exc:
+        print(f"\n  WARNING: Observability cache warm failed — {exc}")
+        print("  Observability endpoints may be slow or fail until DynamoDB is reachable.\n")
 
 
 @asynccontextmanager
@@ -21,6 +35,11 @@ async def lifespan(app: FastAPI):
         print(f"\n  WARNING: Could not initialize database — {exc}")
         print("  The server will start, but database operations may fail.")
         print("  Check IAM permissions, PROJECTS_TABLE/RESULTS_TABLE/JOBS_TABLE, and AWS_REGION.\n")
+    threading.Thread(
+        target=_warm_observability_cache,
+        name="obs-cache-warm",
+        daemon=True,
+    ).start()
     yield
 
 
@@ -53,6 +72,8 @@ app.include_router(jobs.router,      prefix="/api")
 app.include_router(intake.router,    prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(docprojects.router, prefix="/api")
+app.include_router(observability.router, prefix="/api/observability")
+app.include_router(prompt_generator_router.router, prefix="/api/prompt-generator")
 
 
 @app.get("/")
