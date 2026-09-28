@@ -13,6 +13,8 @@ import DocumentationDetail from './pages/DocumentationDetail'
 import ObservabilityHome from './pages/ObservabilityHome'
 import ObservabilityProject from './pages/ObservabilityProject'
 import PromptGenerator from './pages/PromptGenerator'
+import Retrigger from './pages/Retrigger'
+import RetriggerJobDetail from './pages/RetriggerJobDetail'
 import { getToken } from './api/client'
 
 const SIDEBAR_KEY = 'pando_sidebar_open'
@@ -80,6 +82,8 @@ export default function App() {
         <Route path="/observability" element={<PrivateRoute><Layout title="Observability"><ObservabilityHome /></Layout></PrivateRoute>} />
         <Route path="/observability/:projectId" element={<PrivateRoute><Layout title="Observability" fullBleed><ObservabilityProject /></Layout></PrivateRoute>} />
         <Route path="/prompt-generator" element={<PrivateRoute><Layout title="Prompt Generator"><PromptGenerator /></Layout></PrivateRoute>} />
+        <Route path="/retrigger" element={<PrivateRoute><Layout title="Retrigger"><Retrigger /></Layout></PrivateRoute>} />
+        <Route path="/retrigger/jobs/:jobId" element={<PrivateRoute><Layout title="Retrigger Job"><RetriggerJobDetail /></Layout></PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute><Layout title="Settings"><SettingsPage /></Layout></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

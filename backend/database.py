@@ -20,6 +20,8 @@ _PROJECTS_TABLE = os.getenv("PROJECTS_TABLE", "pando-projects")
 _RESULTS_TABLE  = os.getenv("RESULTS_TABLE",  "pando-results")
 _JOBS_TABLE     = os.getenv("JOBS_TABLE",     "pando-jobs")
 _DOCS_TABLE     = os.getenv("DOCS_TABLE",     "pando-doc-projects")
+_RETRIGGER_PROJECTS_TABLE = os.getenv("RETRIGGER_PROJECTS_TABLE", "pando-retrigger-projects")
+_RETRIGGER_JOBS_TABLE     = os.getenv("RETRIGGER_JOBS_TABLE",     "pando-retrigger-jobs")
 
 _dynamodb = None
 
@@ -47,6 +49,14 @@ def tbl_docs():
     return _get_resource().Table(_DOCS_TABLE)
 
 
+def tbl_retrigger_projects():
+    return _get_resource().Table(_RETRIGGER_PROJECTS_TABLE)
+
+
+def tbl_retrigger_jobs():
+    return _get_resource().Table(_RETRIGGER_JOBS_TABLE)
+
+
 def check_connection() -> None:
     print("\n" + "─" * 60)
     print("  DynamoDB connection check")
@@ -55,6 +65,8 @@ def check_connection() -> None:
     print(f"  Results table   : {_RESULTS_TABLE}")
     print(f"  Jobs table      : {_JOBS_TABLE}")
     print(f"  Docs table      : {_DOCS_TABLE}")
+    print(f"  Retrig projects : {_RETRIGGER_PROJECTS_TABLE}")
+    print(f"  Retrig jobs     : {_RETRIGGER_JOBS_TABLE}")
     print("─" * 60)
 
     try:
@@ -148,3 +160,32 @@ def ensure_tables() -> None:
             ],
         )
         print(f"[DynamoDB] Created table: {_DOCS_TABLE}")
+
+    # ── pando-retrigger-projects ──────────────────────────────────────────────
+    if _RETRIGGER_PROJECTS_TABLE not in existing:
+        client.create_table(
+            TableName=_RETRIGGER_PROJECTS_TABLE,
+            KeySchema=[{"AttributeName": "project_id", "KeyType": "HASH"}],
+            BillingMode="PAY_PER_REQUEST",
+            AttributeDefinitions=[
+                {"AttributeName": "project_id", "AttributeType": "S"},
+            ],
+        )
+        print(f"[DynamoDB] Created table: {_RETRIGGER_PROJECTS_TABLE}")
+
+    # ── pando-retrigger-jobs ───────────────────────────────────────────────────
+    if _RETRIGGER_JOBS_TABLE not in existing:
+        client.create_table(
+            TableName=_RETRIGGER_JOBS_TABLE,
+            KeySchema=[{"AttributeName": "job_id", "KeyType": "HASH"}],
+            BillingMode="PAY_PER_REQUEST",
+            AttributeDefinitions=[
+                {"AttributeName": "job_id", "AttributeType": "S"},
+            ],
+        )
+        client.update_time_to_live(
+            TableName=_RETRIGGER_JOBS_TABLE,
+            TimeToLiveSpecification={"Enabled": True, "AttributeName": "ttl"},
+        )
+        print(f"[DynamoDB] Created table: {_RETRIGGER_JOBS_TABLE} (TTL on 'ttl' attribute)")
+
