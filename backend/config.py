@@ -166,6 +166,29 @@ def _session_from_secret(
     return session
 
 
+def _source_creds_from_env() -> dict | None:
+    """Check if SOURCE_AWS_* credentials are set in environment. Returns dict or None."""
+    key_id = (settings.SOURCE_AWS_ACCESS_KEY_ID or "").strip()
+    secret = (settings.SOURCE_AWS_SECRET_ACCESS_KEY or "").strip()
+    if not key_id or not secret:
+        return None
+    return {
+        "access_key_id": key_id,
+        "secret_access_key": secret,
+        "session_token": (settings.SOURCE_AWS_SESSION_TOKEN or "").strip(),
+    }
+
+
+def _session_from_source_creds(creds: dict) -> boto3.Session:
+    """Build a boto3 Session from source account credentials dict."""
+    return boto3.Session(
+        aws_access_key_id=creds["access_key_id"],
+        aws_secret_access_key=creds["secret_access_key"],
+        aws_session_token=creds.get("session_token") or None,
+        region_name=settings.SOURCE_ACCOUNT_REGION,
+    )
+
+
 def make_source_aws_session() -> boto3.Session:
     """
     Return a boto3 Session for the OTHER AWS account where the invoice
