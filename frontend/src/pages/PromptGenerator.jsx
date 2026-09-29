@@ -46,7 +46,7 @@ function CopyBtn({ text }) {
     <button
       onClick={() => { navigator.clipboard.writeText(text); setDone(true); setTimeout(() => setDone(false), 1500) }}
       title="Copy"
-      className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-gray-100 transition-colors"
+      className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-background transition-colors"
     >
       {done ? <Check size={13} /> : <Copy size={13} />}
     </button>
@@ -59,7 +59,7 @@ function Card({ icon: Icon, title, action, children, collapsible = false, defaul
   const [open, setOpen] = useState(defaultOpen)
   const header = (
     <div
-      className={`flex items-center justify-between px-5 py-3.5 border-b border-gray-100 ${collapsible ? 'cursor-pointer select-none' : ''}`}
+      className={`flex items-center justify-between px-5 py-3.5 border-b border-border ${collapsible ? 'cursor-pointer select-none' : ''}`}
       onClick={collapsible ? () => setOpen(v => !v) : undefined}
     >
       <div className="flex items-center gap-2.5">
@@ -77,7 +77,7 @@ function Card({ icon: Icon, title, action, children, collapsible = false, defaul
     </div>
   )
   return (
-    <div className="bg-white border border-pando-green-100 rounded-2xl shadow-card overflow-hidden">
+    <div className="bg-surface border border-pando-green-100 rounded-2xl shadow-card overflow-hidden">
       {header}
       {(!collapsible || open) && <div className="px-5 py-4">{children}</div>}
     </div>
@@ -112,7 +112,7 @@ function FileZone({ label, required, file, onFile, accept, hint }) {
       <Label required={required}>{label}</Label>
       <div
         onClick={() => ref.current?.click()}
-        className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border-2 border-dashed border-gray-200 hover:border-[#6C5CE7] cursor-pointer transition-colors bg-gray-50 hover:bg-[#6C5CE7]/5"
+        className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border-2 border-dashed border-border hover:border-[#6C5CE7] cursor-pointer transition-colors bg-background hover:bg-[#6C5CE7]/5"
       >
         <Upload size={13} className="text-[#6C5CE7] flex-shrink-0" />
         <span className={`text-sm truncate flex-1 ${file ? 'text-text-primary font-medium' : 'text-text-muted'}`}>
@@ -171,7 +171,7 @@ function MultiPdfZone({ files, onChange }) {
           onClick={() => ref.current?.click()}
           onDragOver={e => e.preventDefault()}
           onDrop={onDrop}
-          className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border-2 border-dashed border-gray-200 hover:border-[#6C5CE7] cursor-pointer transition-colors bg-gray-50 hover:bg-[#6C5CE7]/5"
+          className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border-2 border-dashed border-border hover:border-[#6C5CE7] cursor-pointer transition-colors bg-background hover:bg-[#6C5CE7]/5"
         >
           <Upload size={13} className="text-[#6C5CE7] flex-shrink-0" />
           <span className="text-sm text-text-muted flex-1">
@@ -196,7 +196,7 @@ function MultiPdfZone({ files, onChange }) {
         <div className="mt-2 flex flex-col gap-1.5">
           {files.map((f, i) => (
             <div key={f.name}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200">
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background border border-border">
               <FileText size={13} className="text-[#6C5CE7] flex-shrink-0" />
               <span className="text-xs font-medium text-text-primary truncate flex-1">{f.name}</span>
               <span className="text-xs text-text-muted flex-shrink-0 mr-1">
@@ -291,7 +291,7 @@ function PromptPanel({ result }) {
       action={<CopyBtn text={session_prompt} />}>
       <div className="flex flex-col gap-4">
 
-        <pre className="text-xs leading-relaxed bg-gray-50 border border-gray-200 rounded-xl p-3.5 overflow-auto whitespace-pre-wrap text-text-primary"
+        <pre className="text-xs leading-relaxed bg-background border border-border rounded-xl p-3.5 overflow-auto whitespace-pre-wrap text-text-primary"
           style={{ maxHeight: 260 }}>
           {session_prompt || '—'}
         </pre>
@@ -306,7 +306,7 @@ function PromptPanel({ result }) {
                 {pct(prompt_coverage.coverage_ratio)}%
               </span>
             </div>
-            <div className="w-full h-1.5 rounded-full bg-gray-100 mb-2.5">
+            <div className="w-full h-1.5 rounded-full bg-background mb-2.5">
               <div className="h-1.5 rounded-full transition-all"
                 style={{
                   width: `${pct(prompt_coverage.coverage_ratio)}%`,
@@ -325,7 +325,7 @@ function PromptPanel({ result }) {
         )}
 
         {mapping_match?.has_mapping && (
-          <div className="px-3.5 py-3 rounded-xl bg-gray-50 border border-gray-200 text-xs text-text-muted">
+          <div className="px-3.5 py-3 rounded-xl bg-background border border-border text-xs text-text-muted">
             <span className="font-semibold text-text-primary">Field Mapping: </span>
             {mapping_match.summary}
           </div>
@@ -336,7 +336,7 @@ function PromptPanel({ result }) {
             <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">
               Prompt Diff (+{prompt_diff.stats?.lines_added} / −{prompt_diff.stats?.lines_removed})
             </p>
-            <pre className="text-xs bg-gray-50 border border-gray-200 rounded-xl p-3 overflow-auto"
+            <pre className="text-xs bg-background border border-border rounded-xl p-3 overflow-auto"
               style={{ maxHeight: 180 }}>
               {prompt_diff.unified_diff}
             </pre>
@@ -419,7 +419,7 @@ function FieldsPanel({ result, onUpdated, loading, setLoading }) {
                 Retry with Docling
               </button>
               <button onClick={() => doFeedback(false)} disabled={loading}
-                className="px-4 py-1.5 rounded-lg text-sm font-semibold text-text-primary bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-60 transition-colors">
+                className="px-4 py-1.5 rounded-lg text-sm font-semibold text-text-primary bg-surface border border-border hover:bg-background disabled:opacity-60 transition-colors">
                 Accept as-is
               </button>
             </div>
@@ -439,19 +439,19 @@ function FieldsPanel({ result, onUpdated, loading, setLoading }) {
 
         {/* KV table */}
         {fields.length > 0 && (
-          <div className="rounded-xl border border-gray-200 overflow-hidden">
-            <div className="grid px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold uppercase tracking-wider text-text-muted"
+          <div className="rounded-xl border border-border overflow-hidden">
+            <div className="grid px-4 py-2 bg-background border-b border-border text-xs font-semibold uppercase tracking-wider text-text-muted"
               style={{ gridTemplateColumns: '28px 1fr 1fr' }}>
               <span />
               <span>Field</span>
               <span>Value</span>
             </div>
-            <div className="divide-y divide-gray-100 overflow-y-auto" style={{ maxHeight: 340 }}>
+            <div className="divide-y divide-border overflow-y-auto" style={{ maxHeight: 340 }}>
               {fields.map(f => {
                 const wrong = checked[f.path] !== undefined
                 return (
                   <div key={f.path}
-                    className={`grid items-start gap-2 px-4 py-2.5 transition-colors ${wrong ? 'bg-danger-bg' : 'hover:bg-gray-50'}`}
+                    className={`grid items-start gap-2 px-4 py-2.5 transition-colors ${wrong ? 'bg-danger-bg' : 'hover:bg-background'}`}
                     style={{ gridTemplateColumns: '28px 1fr 1fr' }}>
                     <input type="checkbox" checked={wrong} onChange={() => toggle(f.path)}
                       className="mt-0.5 w-3.5 h-3.5 cursor-pointer accent-red-500" />
@@ -495,7 +495,7 @@ function FieldsPanel({ result, onUpdated, loading, setLoading }) {
                 Refine Prompt & Remap
               </button>
               <button onClick={doDocling} disabled={loading}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-text-primary bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-text-primary bg-surface border border-border hover:bg-background disabled:opacity-50 transition-colors">
                 {loading ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
                 Retry with Docling
               </button>
@@ -545,7 +545,7 @@ function ChatPanel({ threadId }) {
               <div className={`px-3.5 py-2.5 rounded-2xl text-sm max-w-[80%] whitespace-pre-wrap leading-relaxed ${
                 m.role === 'user'
                   ? 'text-white rounded-br-sm'
-                  : 'bg-gray-50 border border-gray-200 text-text-primary rounded-bl-sm'
+                  : 'bg-background border border-border text-text-primary rounded-bl-sm'
               }`} style={m.role === 'user' ? { background: '#6C5CE7' } : {}}>
                 {m.content}
               </div>
@@ -553,7 +553,7 @@ function ChatPanel({ threadId }) {
           ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="px-3.5 py-2.5 rounded-2xl rounded-bl-sm bg-gray-50 border border-gray-200">
+              <div className="px-3.5 py-2.5 rounded-2xl rounded-bl-sm bg-background border border-border">
                 <Loader2 size={14} className="animate-spin text-[#6C5CE7]" />
               </div>
             </div>
@@ -628,7 +628,7 @@ export default function PromptGenerator() {
           </div>
         ) : (
           /* placeholder so layout doesn't collapse on initial load */
-          <div className="hidden xl:flex items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 text-sm text-text-muted"
+          <div className="hidden xl:flex items-center justify-center rounded-2xl border-2 border-dashed border-border bg-surface text-sm text-text-muted"
             style={{ minHeight: 300 }}>
             Results will appear here after extraction
           </div>

@@ -24,13 +24,11 @@ export default function TopBar({ title, sidebarOpen }) {
         </div>
 
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-          <div className="h-11 px-4 rounded-xl bg-[#0D1117] border border-white/10 flex items-center justify-center">
-            <img
-              src="/aivar-logo-white.webp"
-              alt="Aivar"
-              className="h-8 w-auto object-contain"
-            />
-          </div>
+          <img
+            src={isDark ? '/aivar-wordmark.png' : '/aivar-wordmark-dark.png'}
+            alt="Aivar"
+            className="h-8 w-auto object-contain"
+          />
         </div>
 
         <div className="flex items-center gap-2 z-10">

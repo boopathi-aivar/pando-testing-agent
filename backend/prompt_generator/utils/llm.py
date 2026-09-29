@@ -64,7 +64,8 @@ class BedrockChat:
     ) -> None:
         if not model_id:
             raise ValueError(
-                "Bedrock model id missing. Set AWS_BEDROCK_INFERENCE_GLOBAL_ID in .env"
+                "Bedrock model id missing. Set AWS_BEDROCK_INFERENCE_GLOBAL_ID "
+                "or BEDROCK_MODEL_ID in .env"
             )
 
         self.model_id = model_id

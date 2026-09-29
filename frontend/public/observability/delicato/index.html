@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Delicato Invoice Dashboard</title>
+  <script>
+    (function () {
+      var dark = new URLSearchParams(location.search).get('theme') === 'dark';
+      document.documentElement.classList.toggle('dark', dark);
+      document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+    })();
+  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>

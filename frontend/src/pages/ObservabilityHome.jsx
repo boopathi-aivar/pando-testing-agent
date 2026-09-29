@@ -36,7 +36,7 @@ export default function ObservabilityHome() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search projects…"
-          className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-white text-sm text-text-primary placeholder:text-text-secondary/70 outline-none focus:border-pando-green/50"
+          className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm"
         />
       </div>
 
@@ -48,7 +48,7 @@ export default function ObservabilityHome() {
             <li key={project.id}>
               <Link
                 to={`/observability/${project.id}`}
-                className="block h-full px-4 py-3 rounded-xl border border-border bg-white hover:border-pando-green/40 hover:bg-background transition-colors"
+                className="block h-full px-4 py-3 rounded-xl border border-border bg-surface hover:border-pando-green/40 hover:bg-background transition-colors"
               >
                 <span className="font-medium text-text-primary">{project.name}</span>
                 <p className="text-sm text-text-secondary mt-0.5">{project.description}</p>

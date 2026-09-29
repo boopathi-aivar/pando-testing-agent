@@ -4,6 +4,7 @@ import {
   OBSERVABILITY_PROJECTS,
   resolveObservabilityProject,
 } from '../observability/projects'
+import { useTheme } from '../theme'
 
 const API_ORIGIN = import.meta.env.VITE_API_URL || ''
 
@@ -16,6 +17,7 @@ function tabTitle(hub, activeId) {
 export default function ObservabilityProject() {
   const { projectId } = useParams()
   const navigate = useNavigate()
+  const { isDark } = useTheme()
   const resolved = resolveObservabilityProject(projectId)
 
   if (!resolved) {
@@ -28,6 +30,7 @@ export default function ObservabilityProject() {
     apiBase,
     project: activeId,
     title: tabTitle(hub, activeId),
+    theme: isDark ? 'dark' : 'light',
   })
   const src = `${hub.src}?${params.toString()}`
 
@@ -50,7 +53,7 @@ export default function ObservabilityProject() {
           <select
             value={hub.id}
             onChange={(e) => navigate(`/observability/${e.target.value}`)}
-            className="rounded-lg border border-border bg-white px-2.5 py-1.5 text-sm text-text-primary outline-none focus:border-pando-green/50 max-w-[12rem]"
+            className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-text-primary outline-none focus:border-pando-green/50 max-w-[12rem]"
             aria-label="Switch observability project"
           >
             {OBSERVABILITY_PROJECTS.map((p) => (
@@ -64,7 +67,7 @@ export default function ObservabilityProject() {
 
       {hub.tabs?.length > 1 && (
         <div
-          className="flex gap-1 shrink-0 p-1 rounded-xl border border-border bg-white w-fit"
+          className="flex gap-1 shrink-0 p-1 rounded-xl border border-border bg-surface w-fit"
           role="tablist"
           aria-label={`${hub.name} views`}
         >
@@ -77,10 +80,9 @@ export default function ObservabilityProject() {
                 role="tab"
                 aria-selected={selected}
                 onClick={() => navigate(`/observability/${tab.id}`)}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selected ? 'text-white' : 'text-text-secondary hover:text-text-primary'}`}
                 style={{
                   background: selected ? '#6C5CE7' : 'transparent',
-                  color: selected ? '#fff' : undefined,
                 }}
               >
                 {tab.label}
@@ -91,10 +93,10 @@ export default function ObservabilityProject() {
       )}
 
       <iframe
-        key={activeId}
+        key={`${activeId}-${isDark ? 'dark' : 'light'}`}
         title={tabTitle(hub, activeId)}
         src={src}
-        className="w-full flex-1 min-h-0 border-0 rounded-xl bg-white"
+        className="w-full flex-1 min-h-0 border-0 rounded-xl bg-surface"
       />
     </div>
   )

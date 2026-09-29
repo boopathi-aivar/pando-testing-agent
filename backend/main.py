@@ -12,6 +12,30 @@ from config import check_aws_credentials
 from seed import seed_if_empty
 
 
+def _print_local_pdf_mode() -> None:
+    from pathlib import Path
+    from agents.input_collector import _configured_local_pdf_path
+    path = _configured_local_pdf_path()
+    print("  Invoice PDF")
+    if path:
+        print(f"  Mode            : LOCAL file")
+        print(f"  Path            : {path}")
+        print("  ✓  Scoring will use this PDF instead of S3.")
+        print("  Parsing now — RapidOCR / native lines print below.\n")
+        try:
+            from services.pdf_parser import parse_pdf
+            parse_pdf(Path(path).read_bytes())
+        except Exception as exc:
+            print(f"  ✗  Local PDF parse failed: {type(exc).__name__}: {exc}")
+    else:
+        flag = os.getenv("LOCAL_INVOICE_PDF", "").strip()
+        raw = (os.getenv("LOCAL_INVOICE_PDF_PATH") or "").strip()
+        print("  Mode            : S3")
+        if flag.lower() in ("1", "true", "yes", "on"):
+            print(f"  ✗  LOCAL_INVOICE_PDF={flag} but path is missing or not a file: {raw or '(empty)'}")
+    print()
+
+
 def _warm_observability_cache() -> None:
     """Full table scans — run off the startup path so the API can accept traffic."""
     try:
@@ -27,6 +51,7 @@ def _warm_observability_cache() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     check_aws_credentials()
+    _print_local_pdf_mode()
     check_connection()
     try:
         ensure_tables()

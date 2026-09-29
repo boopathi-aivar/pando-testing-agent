@@ -4,6 +4,9 @@ const _qs = new URLSearchParams(window.location.search);
 const API_BASE = _qs.get("apiBase") || "/api/observability/delicato";
 const PROJECT_ID = _qs.get("project") || "delicato";
 const PAGE_TITLE = _qs.get("title") || "Delicato Invoice Processing";
+const THEME = _qs.get("theme") === "dark" ? "dark" : "light";
+document.documentElement.classList.toggle("dark", THEME === "dark");
+document.documentElement.style.colorScheme = THEME;
 
 /* Carrier master lists (empty / missing → hide carrier filter) */
 const DELICATO_CARRIERS = [

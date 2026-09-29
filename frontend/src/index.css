@@ -124,6 +124,9 @@ body {
 .border-pando-green-200, .border-aivar-purple-200 { border-color: var(--color-purple-200) !important; }
 .shadow-card, .shadow-card-hover { box-shadow: var(--c-shadow) !important; }
 .shadow-topbar { box-shadow: 0 1px 0 var(--color-border) !important; }
+.divide-border > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--color-border) !important;
+}
 
 .field-row-correct,
 .field-row-wrong,
