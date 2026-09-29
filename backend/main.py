@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import auth, projects, results, jobs, intake, dashboard, docprojects, observability
+from routers import auth, projects, results, jobs, intake, dashboard, docprojects, observability, retrigger
 from routers import prompt_generator as prompt_generator_router
 from database import check_connection, ensure_tables
 from config import check_aws_credentials
@@ -97,6 +97,7 @@ app.include_router(jobs.router,      prefix="/api")
 app.include_router(intake.router,    prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(docprojects.router, prefix="/api")
+app.include_router(retrigger.router, prefix="/api")
 app.include_router(observability.router, prefix="/api/observability")
 app.include_router(prompt_generator_router.router, prefix="/api/prompt-generator")
 

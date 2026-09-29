@@ -129,3 +129,57 @@ export async function retestResult(projectId, resultId) {
 export async function getJobStatus(jobId) {
   return request(`/jobs/${jobId}/status`)
 }
+
+// ─── Retrigger ─────────────────────────────────────────────────────────────────
+export async function getRetriggerProjects() {
+  return request('/retrigger/projects')
+}
+
+export async function getRetriggerProject(id) {
+  return request(`/retrigger/projects/${id}`)
+}
+
+export async function createRetriggerProject(data) {
+  return request('/retrigger/projects', { method: 'POST', body: JSON.stringify(data) })
+}
+
+export async function updateRetriggerProject(id, data) {
+  return request(`/retrigger/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+}
+
+export async function deleteRetriggerProject(id) {
+  const token = getToken()
+  const headers = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(`${API_BASE}/api/retrigger/projects/${id}`, { method: 'DELETE', headers })
+  if (res.status === 401) { clearAuth(); window.location.href = '/login'; throw new Error('Session expired') }
+  if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.detail ?? `Delete failed: ${res.status}`) }
+}
+
+export async function getRetriggerJobs(projectId) {
+  const q = projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''
+  return request(`/retrigger/jobs${q}`)
+}
+
+export async function getRetriggerJob(jobId) {
+  return request(`/retrigger/jobs/${jobId}`)
+}
+
+export async function createRetriggerJob(projectId, invoiceNumbers, folderName) {
+  return request('/retrigger/jobs', {
+    method: 'POST',
+    body: JSON.stringify({ project_id: projectId, invoice_numbers: invoiceNumbers, folder_name: folderName }),
+  })
+}
+
+export async function pauseRetriggerJob(jobId) {
+  return request(`/retrigger/jobs/${jobId}/pause`, { method: 'POST' })
+}
+
+export async function resumeRetriggerJob(jobId) {
+  return request(`/retrigger/jobs/${jobId}/resume`, { method: 'POST' })
+}
+
+export async function triggerRetriggerFetchRecords(jobId) {
+  return request(`/retrigger/jobs/${jobId}/fetch-records`, { method: 'POST' })
+}

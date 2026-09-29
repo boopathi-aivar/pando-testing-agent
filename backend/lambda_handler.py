@@ -33,6 +33,15 @@ def processor_handler(event: dict, context) -> dict:
 
       Retest (stored result):
         { "mode": "retest", "job_id": "...", "result_id": "..." }
+
+      Retrigger (re-ingestion pipeline):
+        { "mode": "retrigger", "job_id": "...", "invoice_numbers": [...], "cfg": {...} }
+
+      Retrigger resume (continue paused job):
+        { "mode": "retrigger_resume", "job_id": "...", "invoice_numbers": [...], "cfg": {...}, "resume_from_step": "delete_records" }
+
+      Retrigger fetch-records (on-demand re-scan):
+        { "mode": "retrigger_fetch_records", "job_id": "...", "invoice_numbers": [...], "cfg": {...} }
     """
     from tools.dynamodb_tools import update_job
 
@@ -102,15 +111,37 @@ def processor_handler(event: dict, context) -> dict:
                     "completed_at":  now,
                 })
 
+        elif mode == "retrigger":
+            # Own try/except + its own DynamoDB table (retrigger-jobs, not
+            # jobs) — don't fall through to the generic update_job() below.
+            from services.retrigger_pipeline import run_retrigger_pipeline
+            run_retrigger_pipeline(job_id, event["invoice_numbers"], event["cfg"])
+
+        elif mode == "retrigger_resume":
+            # Resume a paused retrigger job
+            from services.retrigger_pipeline import run_retrigger_pipeline
+            run_retrigger_pipeline(
+                job_id, 
+                event["invoice_numbers"], 
+                event["cfg"],
+                resume_from_step=event.get("resume_from_step")
+            )
+
+        elif mode == "retrigger_fetch_records":
+            from services.retrigger_pipeline import run_fetch_records
+            run_fetch_records(job_id, event["invoice_numbers"], event["cfg"])
+
         else:
             print(f"[ProcessorHandler] Unknown mode: {mode}")
 
     except Exception as exc:
         print(f"[ProcessorHandler] Job {job_id} failed: {exc}")
-        update_job(job_id, {
-            "status":       "failed",
-            "error":        str(exc),
-            "completed_at": now,
-        })
+        # Don't update retrigger jobs here — they handle their own state
+        if mode not in ("retrigger", "retrigger_resume", "retrigger_fetch_records"):
+            update_job(job_id, {
+                "status":       "failed",
+                "error":        str(exc),
+                "completed_at": now,
+            })
 
     return {"statusCode": 200}

@@ -167,18 +167,20 @@ def _session_from_secret(
 
 
 def _source_creds_from_env() -> dict | None:
-    key = (settings.SOURCE_AWS_ACCESS_KEY_ID or "").strip()
+    """Check if SOURCE_AWS_* credentials are set in environment. Returns dict or None."""
+    key_id = (settings.SOURCE_AWS_ACCESS_KEY_ID or "").strip()
     secret = (settings.SOURCE_AWS_SECRET_ACCESS_KEY or "").strip()
-    if not key or not secret:
+    if not key_id or not secret:
         return None
     return {
-        "access_key_id": key,
+        "access_key_id": key_id,
         "secret_access_key": secret,
         "session_token": (settings.SOURCE_AWS_SESSION_TOKEN or "").strip(),
     }
 
 
 def _session_from_source_creds(creds: dict) -> boto3.Session:
+    """Build a boto3 Session from source account credentials dict."""
     return boto3.Session(
         aws_access_key_id=creds["access_key_id"],
         aws_secret_access_key=creds["secret_access_key"],
