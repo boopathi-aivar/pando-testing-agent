@@ -110,13 +110,70 @@ def parse_pdf(pdf_bytes: bytes) -> dict:
             text = "\n".join(i["text"] for i in items).strip()
             if text:
                 md_pages.append(f"### Page {page_num} ({source})\n\n{text}")
+            _dump_page(page_rec)
     finally:
         doc.close()
 
     markdown = "\n\n---\n\n".join(md_pages)
     if not markdown.strip():
         print("[PDFParser] No text from native layer or OCR")
+    _dump_markdown(markdown, pages_out)
     return {"markdown": markdown, "pages": pages_out}
+
+
+def _should_dump() -> bool:
+    """Print OCR/native extraction in the terminal during local runs."""
+    dump = os.getenv("PDF_OCR_DUMP", "").strip().lower()
+    if dump in ("1", "true", "yes", "on"):
+        return True
+    if dump in ("0", "false", "off", "no"):
+        return False
+    local = os.getenv("LOCAL_INVOICE_PDF", "").strip().lower()
+    return local in ("1", "true", "yes", "on")
+
+
+def _dump_page(page_rec: dict) -> None:
+    if not _should_dump():
+        return
+    items = page_rec.get("items") or []
+    page = page_rec.get("page")
+    source = page_rec.get("source")
+    print()
+    print("=" * 78)
+    print(
+        f"[PDFParser] Page {page}  source={source}  "
+        f"lines={len(items)}  "
+        f"{page_rec.get('width')}x{page_rec.get('height')} pts"
+    )
+    print("-" * 78)
+    if not items:
+        print("  (no lines)")
+        print("=" * 78)
+        return
+    print(f"  {'#':>3}  {'score':>5}  {'bbox [x0,y0,x1,y1]':<32}  text")
+    for i, it in enumerate(items, start=1):
+        bbox = it.get("bbox") or [0, 0, 0, 0]
+        box = ",".join(f"{float(v):.1f}" for v in bbox[:4])
+        score = it.get("score")
+        score_s = f"{float(score):.2f}" if score is not None else "  n/a"
+        text = (it.get("text") or "").replace("\n", " ")
+        print(f"  {i:3d}  {score_s:>5}  [{box}]  {text}")
+    print("=" * 78)
+
+
+def _dump_markdown(markdown: str, pages: list[dict]) -> None:
+    if not _should_dump():
+        return
+    sources = ", ".join(
+        f"p{p.get('page')}={p.get('source')}" for p in pages
+    ) or "none"
+    print()
+    print("=" * 78)
+    print(f"[PDFParser] Assembled markdown  ({len(markdown)} chars, {sources})")
+    print("-" * 78)
+    print(markdown or "(empty)")
+    print("=" * 78)
+    print()
 
 
 def _ocr_engine_name() -> str:

@@ -995,3 +995,128 @@ td.loading, td.empty {
   color: #15803d;
   animation: retriggerSlideIn 0.18s ease-out;
 }
+
+/* ── Dark theme (parent app passes ?theme=dark) ──────────────────────────── */
+html.dark,
+html.dark body {
+  background: #07080C;
+  color: #F5F5F7;
+  color-scheme: dark;
+}
+html.dark header {
+  background: #0D1117;
+  box-shadow: 0 1px 0 #262933;
+}
+html.dark .card,
+html.dark .filters,
+html.dark .table-section,
+html.dark .modal,
+html.dark .steps-timeline,
+html.dark .time-popover,
+html.dark .custom-select-menu {
+  background: #111318;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  color: #F5F5F7;
+}
+html.dark .card-label,
+html.dark .filter-group label,
+html.dark th,
+html.dark .time-active-label,
+html.dark .page-info,
+html.dark .detail-section-title,
+html.dark .detail-key,
+html.dark .step-tx,
+html.dark .step-meta {
+  color: #C5C9D4;
+}
+html.dark .card-value,
+html.dark .detail-val,
+html.dark .step-key,
+html.dark .modal-title,
+html.dark td {
+  color: #F5F5F7;
+}
+html.dark thead {
+  background: #0C0D12;
+  border-bottom-color: #262933;
+}
+html.dark tbody tr { border-bottom-color: #262933; }
+html.dark tbody tr:hover { background: rgba(108, 92, 231, 0.08); }
+html.dark td.loading,
+html.dark td.empty { color: #8B8F9A; }
+html.dark .filter-group select,
+html.dark .filter-group input,
+html.dark .custom-select-trigger,
+html.dark .time-chip,
+html.dark .page-btn,
+html.dark .detail-btn,
+html.dark .retrigger-btn,
+html.dark .time-btn-outline {
+  background: #0C0D12;
+  border-color: #262933;
+  color: #F5F5F7;
+}
+html.dark .filter-group select option {
+  background: #111318;
+  color: #F5F5F7;
+}
+html.dark .custom-select-trigger:hover,
+html.dark .time-chip:hover,
+html.dark .page-btn:hover:not(:disabled),
+html.dark .detail-btn:hover {
+  background: #1C1A30;
+  border-color: #6C5CE7;
+  color: #C4BEFA;
+}
+html.dark .custom-select-option { color: #F5F5F7; }
+html.dark .custom-select-option:hover { background: rgba(255, 255, 255, 0.06); }
+html.dark .custom-select-option.selected,
+html.dark .time-chip.active {
+  background: #1C1A30;
+  color: #C4BEFA;
+  border-color: #6C5CE7;
+}
+html.dark .pagination { border-top-color: #262933; }
+html.dark .modal-header,
+html.dark .detail-section-title {
+  background: #0C0D12;
+  border-color: #262933;
+}
+html.dark .modal-close { color: #8B8F9A; }
+html.dark .modal-close:hover { color: #F5F5F7; }
+html.dark .detail-section { border-color: #262933; }
+html.dark .detail-row { border-bottom-color: #262933; }
+html.dark .detail-row:nth-child(odd) { background: #0C0D12; }
+html.dark .payload-pre {
+  background: #0C0D12;
+  border-color: #262933;
+  color: #E6E8EE;
+}
+html.dark .step-row { border-bottom-color: #262933; }
+html.dark .step-row-error { background: #301214; }
+html.dark .step-index { background: #262244; color: #C4BEFA; }
+html.dark .badge-completed  { background: #0C241C; color: #34D399; }
+html.dark .badge-failed     { background: #301214; color: #F87171; }
+html.dark .badge-api-failed { background: #2A200A; color: #FBBF24; }
+html.dark .badge-processing { background: #1C1A30; color: #A29BFE; }
+html.dark .badge-queued     { background: #1C1A30; color: #C4BEFA; }
+html.dark .badge-rejected   { background: #301214; color: #F87171; }
+html.dark .badge-default    { background: #1C1A30; color: #C5C9D4; }
+html.dark .time-popover { border: 1px solid #262933; }
+html.dark .time-mode-btn,
+html.dark .time-preset-btn {
+  background: #0C0D12;
+  border-color: #262933;
+  color: #E6E8EE;
+}
+html.dark .time-mode-btn.active,
+html.dark .time-preset-btn.active {
+  background: #6C5CE7;
+  border-color: #6C5CE7;
+  color: #fff;
+}
+html.dark .retrigger-success-panel {
+  background: #0C241C;
+  border-color: #34D399;
+  color: #34D399;
+}

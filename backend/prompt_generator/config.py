@@ -20,7 +20,8 @@ AWS_REGION = (
 BEDROCK_MODEL_ID = (
     os.getenv("AWS_BEDROCK_INFERENCE_GLOBAL_ID")
     or os.getenv("BEDROCK_MODEL_ARN")
-    or ""
+    or os.getenv("BEDROCK_MODEL_ID")
+    or "us.anthropic.claude-sonnet-4-6"
 ).strip()
 BEDROCK_READ_TIMEOUT = int(os.getenv("BEDROCK_READ_TIMEOUT", "300"))
 BEDROCK_CONNECT_TIMEOUT = int(os.getenv("BEDROCK_CONNECT_TIMEOUT", "10"))
@@ -37,7 +38,7 @@ LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0"))
 def active_model_label() -> str:
     """Human-readable model string for health / UI."""
     if LLM_PROVIDER == "bedrock":
-        mid = BEDROCK_MODEL_ID or "(unset — set AWS_BEDROCK_INFERENCE_GLOBAL_ID in .env)"
+        mid = BEDROCK_MODEL_ID or "(unset — set BEDROCK_MODEL_ID in .env)"
         if "claude-sonnet-4-5" in mid:
             return "bedrock:claude-sonnet-4-5"
         if "/" in mid:
