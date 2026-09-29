@@ -803,6 +803,146 @@ td.loading, td.empty {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  /* Don't inherit section title uppercase / letter-spacing */
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 600;
+}
+.payload-action-btn,
+.payload-expand-btn,
+.payload-copy-btn,
+.payload-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  height: 30px;
+  padding: 0 12px;
+  margin: 0;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.payload-action-btn:hover:not(:disabled),
+.payload-expand-btn:hover,
+.payload-copy-btn:hover,
+.payload-link-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+.payload-action-btn:focus-visible,
+.payload-expand-btn:focus-visible,
+.payload-copy-btn:focus-visible,
+.payload-link-btn:focus-visible {
+  outline: 2px solid #c4b5fd;
+  outline-offset: 1px;
+}
+.payload-action-btn:disabled,
+.payload-link-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.payload-action-btn--primary,
+.payload-expand-btn {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: #fff;
+}
+.payload-action-btn--primary:hover:not(:disabled),
+.payload-expand-btn:hover {
+  background: #6d28d9;
+  border-color: #6d28d9;
+  color: #fff;
+}
+.payload-copy-btn.copied,
+.payload-action-btn.copied {
+  border-color: #22c55e;
+  color: #15803d;
+}
+.payload-empty-hint {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #64748b;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+}
+.pdf-backdrop {
+  z-index: 220;
+}
+.pdf-modal {
+  z-index: 221;
+  width: min(960px, 96vw);
+  max-height: 92vh;
+  display: none;
+  flex-direction: column;
+}
+.pdf-modal.open {
+  display: flex;
+}
+.pdf-modal-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background: #0f172a;
+}
+.pdf-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 70vh;
+  border: 0;
+  background: #fff;
+}
+.pdf-error {
+  margin: 0;
+  padding: 16px 18px;
+  color: #fecaca;
+  background: #7f1d1d;
+  font-size: 13px;
+}
+html.dark .payload-action-btn,
+html.dark .payload-copy-btn,
+html.dark .payload-link-btn {
+  background: #1e1e24;
+  color: #c8c8d0;
+  border-color: #3a3a45;
+}
+html.dark .payload-action-btn:hover:not(:disabled),
+html.dark .payload-copy-btn:hover,
+html.dark .payload-link-btn:hover:not(:disabled) {
+  background: #2a2a33;
+  color: #f5f5f7;
+  border-color: #52525b;
+}
+html.dark .payload-action-btn--primary,
+html.dark .payload-expand-btn {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: #fff;
+}
+html.dark .payload-empty-hint {
+  color: #94a3b8;
 }
 .payload-pre {
   margin: 0;
@@ -826,39 +966,6 @@ td.loading, td.empty {
   max-height: min(48vh, 440px);
   overflow-y: auto;
   overflow-x: auto;
-}
-.payload-expand-btn,
-.payload-copy-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #7c3aed;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  text-transform: none;
-  letter-spacing: 0;
-}
-.payload-expand-btn:hover,
-.payload-copy-btn:hover {
-  background: #6d28d9;
-}
-.payload-copy-btn {
-  background: #fff;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-}
-.payload-copy-btn:hover {
-  background: #f1f5f9;
-  color: #1e293b;
-}
-.payload-copy-btn.copied {
-  border-color: #22c55e;
-  color: #15803d;
 }
 
 /* ── Re-trigger inline confirmation panel ─────────────────────────────────── */

@@ -237,6 +237,19 @@
     <div class="modal-body" id="modalBody"></div>
   </div>
 
+  <!-- PDF Viewer Modal -->
+  <div class="modal-backdrop pdf-backdrop" id="pdfBackdrop" onclick="closePdfModal()"></div>
+  <div class="modal pdf-modal" id="pdfModal">
+    <div class="modal-header">
+      <span class="modal-title" id="pdfModalTitle">Invoice PDF</span>
+      <button class="modal-close" onclick="closePdfModal()" aria-label="Close PDF">✕</button>
+    </div>
+    <div class="pdf-modal-body">
+      <p class="pdf-error" id="pdfError" hidden></p>
+      <iframe id="pdfFrame" class="pdf-frame" title="Invoice PDF" hidden></iframe>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

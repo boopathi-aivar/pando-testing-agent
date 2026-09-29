@@ -771,7 +771,32 @@ function renderModal(inv) {
     ]));
   }
 
-  /* ── API Payload (expandable JSON) ── */
+  /* ── API Payload (expandable JSON) + CloudWatch / PDF actions ── */
+  const hasCw = !!(inv.cloudwatch_url || inv.cloudwatch_log_group);
+  const hasPdf = !!inv.has_pdf;
+  const emailAttr = esc(inv.email_id || "");
+  const attAttr = esc(inv.attachment_id || "");
+  const cwAccount = esc(inv.cloudwatch_account_id || "354602095398");
+  const cwTitle = hasCw
+    ? `Open this invoice's CloudWatch log stream (AWS account ${cwAccount})`
+    : "CloudWatch log group not configured for this project";
+  const cwBtn = (inv.email_id && inv.attachment_id && hasCw)
+    ? `<button type="button" class="payload-action-btn"
+         data-email-id="${emailAttr}"
+         data-attachment-id="${attAttr}"
+         title="${cwTitle}"
+         onclick="viewCloudWatchLog(this)">View CloudWatch log</button>`
+    : `<button type="button" class="payload-action-btn" disabled
+         title="${cwTitle}">View CloudWatch log</button>`;
+  const pdfBtn = (inv.email_id && inv.attachment_id)
+    ? `<button type="button" class="payload-action-btn"
+         ${hasPdf ? "" : "disabled "}
+         data-email-id="${emailAttr}"
+         data-attachment-id="${attAttr}"
+         title="${hasPdf ? "View invoice PDF" : "No PDF path found for this invoice"}"
+         onclick="viewInvoicePdf(this)">View PDF</button>`
+    : "";
+
   if (inv.api_payload != null) {
     const pretty = typeof inv.api_payload === "string"
       ? (() => {
@@ -790,11 +815,13 @@ function renderModal(inv) {
 
     const actions = `
       <div class="payload-actions">
+        ${cwBtn}
+        ${pdfBtn}
         ${canExpand
-          ? `<button type="button" class="payload-expand-btn" id="${id}-toggle"
+          ? `<button type="button" class="payload-action-btn payload-action-btn--primary" id="${id}-toggle"
                onclick="togglePayload('${id}', this)">Expand</button>`
           : ""}
-        <button type="button" class="payload-copy-btn" title="Copy payload"
+        <button type="button" class="payload-action-btn" title="Copy payload"
           onclick="copyPayload('${id}', this)" aria-label="Copy payload">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -816,6 +843,18 @@ function renderModal(inv) {
           <pre class="payload-pre payload-preview" id="${id}-preview">${esc(preview)}</pre>
           <pre class="payload-pre payload-full" id="${id}-full" hidden>${esc(pretty)}</pre>
         </div>
+      </div>`;
+  } else {
+    html += `
+      <div class="detail-section">
+        <div class="detail-section-title with-actions">
+          <span>Logs &amp; PDF</span>
+          <div class="payload-actions">
+            ${cwBtn}
+            ${pdfBtn}
+          </div>
+        </div>
+        <p class="payload-empty-hint">No API payload stored for this invoice.</p>
       </div>`;
   }
 
@@ -992,6 +1031,122 @@ function detailRow(key, val, raw = false) {
 function closeModal() {
   document.getElementById("modalBackdrop").classList.remove("open");
   document.getElementById("detailModal").classList.remove("open");
+}
+
+/* ── PDF viewer ───────────────────────────────────────────────────────────── */
+let _pdfObjectUrl = null;
+
+async function viewCloudWatchLog(btn) {
+  const emailId = btn?.dataset?.emailId;
+  const attachmentId = btn?.dataset?.attachmentId;
+  if (!emailId || !attachmentId) return;
+
+  const prevLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Opening…";
+
+  try {
+    const data = await apiFetch(
+      `/invoices/${encodeURIComponent(emailId)}/` +
+      `${encodeURIComponent(attachmentId)}/cloudwatch-link`
+    );
+    if (!data?.url) throw new Error("No CloudWatch URL returned");
+    window.open(data.url, "_blank", "noopener,noreferrer");
+  } catch (e) {
+    alert(e.message || "Failed to open CloudWatch logs");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prevLabel || "View CloudWatch log";
+  }
+}
+
+async function viewInvoicePdf(btn) {
+  const emailId = btn?.dataset?.emailId;
+  const attachmentId = btn?.dataset?.attachmentId;
+  if (!emailId || !attachmentId) return;
+
+  const backdrop = document.getElementById("pdfBackdrop");
+  const modal = document.getElementById("pdfModal");
+  const frame = document.getElementById("pdfFrame");
+  const title = document.getElementById("pdfModalTitle");
+  const errEl = document.getElementById("pdfError");
+  if (!backdrop || !modal || !frame) return;
+
+  if (_pdfObjectUrl) {
+    URL.revokeObjectURL(_pdfObjectUrl);
+    _pdfObjectUrl = null;
+  }
+  frame.removeAttribute("src");
+  frame.hidden = true;
+  if (errEl) {
+    errEl.hidden = true;
+    errEl.textContent = "";
+  }
+  if (title) title.textContent = "Loading PDF…";
+  backdrop.classList.add("open");
+  modal.classList.add("open");
+
+  const prevLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Loading…";
+
+  try {
+    const token = localStorage.getItem("pando_token");
+    const headers = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const url =
+      `${API_BASE}/invoices/${encodeURIComponent(emailId)}/` +
+      `${encodeURIComponent(attachmentId)}/pdf`;
+    const res = await fetch(url, { headers });
+    if (res.status === 401) {
+      localStorage.removeItem("pando_token");
+      localStorage.removeItem("pando_user");
+      window.top.location.href = "/login";
+      return;
+    }
+    if (!res.ok) {
+      let detail = `Failed to load PDF (${res.status})`;
+      try {
+        const j = await res.json();
+        if (j?.detail) detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail);
+      } catch { /* ignore */ }
+      throw new Error(detail);
+    }
+    const blob = await res.blob();
+    _pdfObjectUrl = URL.createObjectURL(blob);
+    frame.src = _pdfObjectUrl;
+    frame.hidden = false;
+    if (title) {
+      const cd = res.headers.get("Content-Disposition") || "";
+      const m = /filename="?([^"]+)"?/i.exec(cd);
+      title.textContent = m ? m[1] : "Invoice PDF";
+    }
+  } catch (e) {
+    if (errEl) {
+      errEl.textContent = e.message || "Failed to load PDF";
+      errEl.hidden = false;
+    }
+    if (title) title.textContent = "Invoice PDF";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prevLabel || "View PDF";
+  }
+}
+
+function closePdfModal() {
+  const backdrop = document.getElementById("pdfBackdrop");
+  const modal = document.getElementById("pdfModal");
+  const frame = document.getElementById("pdfFrame");
+  if (backdrop) backdrop.classList.remove("open");
+  if (modal) modal.classList.remove("open");
+  if (frame) {
+    frame.removeAttribute("src");
+    frame.hidden = true;
+  }
+  if (_pdfObjectUrl) {
+    URL.revokeObjectURL(_pdfObjectUrl);
+    _pdfObjectUrl = null;
+  }
 }
 
 /* ── Status badge ─────────────────────────────────────────────────────────── */

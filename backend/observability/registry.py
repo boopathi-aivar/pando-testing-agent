@@ -20,6 +20,28 @@ class ObservabilityProject:
     account: str  # "ops" | "meta"
     table_name: str
     region: str
+    # Primary Lambda log group used by "View CloudWatch log" deep-links.
+    cloudwatch_log_group: str = ""
+
+
+# Invoice-processor / orchestrator log groups.
+# These live in the source/ops AWS account (see CLOUDWATCH_CONSOLE_ACCOUNT_ID),
+# NOT in the "production" console account users often keep open.
+_DEFAULT_LOG_GROUPS: dict[str, str] = {
+    "delicato": "/aws/lambda/pando-delicato-orchestrator",
+    "ge": "/aws/lambda/pando-general-electronics-invoice-processor-temp",
+    "jnj": "/aws/lambda/pando-JJ-invoice-processing",
+    "otter": "/aws/lambda/pando-otter-invoice-processor",
+    "ghent": "/aws/lambda/pando-ghent-invoice_processing_temp",
+    "west-marine": "/aws/lambda/pando-west-marine-orchestrator",
+    "viking": "/aws/lambda/pando-viking-invoice-processing",
+    "unilever": "/aws/lambda/Pando-Unilever-Invoice",
+    "unilever-excel": "/aws/lambda/pando-unilever-excel-processor",
+    "meta": "/aws/lambda/pando-meta-invoice",
+}
+
+# Account where invoice Lambda CloudWatch log groups actually exist.
+CLOUDWATCH_CONSOLE_ACCOUNT_ID = "354602095398"
 
 
 def _meta_session() -> boto3.Session:
@@ -41,13 +63,20 @@ def session_for_account(account: str) -> boto3.Session:
     return make_aws_session()
 
 
-def _ops(project_id: str, name: str, table_name: str) -> ObservabilityProject:
+def _ops(
+    project_id: str,
+    name: str,
+    table_name: str,
+    cloudwatch_log_group: str = "",
+) -> ObservabilityProject:
     return ObservabilityProject(
         id=project_id,
         name=name,
         account="ops",
         table_name=table_name,
         region=settings.OBSERVABILITY_DDB_REGION or settings.DELICATO_AWS_REGION,
+        cloudwatch_log_group=cloudwatch_log_group
+        or _DEFAULT_LOG_GROUPS.get(project_id, ""),
     )
 
 
@@ -74,6 +103,7 @@ def _build_projects() -> dict[str, ObservabilityProject]:
             account="meta",
             table_name=settings.META_LOG_TABLE,
             region=settings.META_DDB_REGION,
+            cloudwatch_log_group=_DEFAULT_LOG_GROUPS.get("meta", ""),
         ),
     }
 

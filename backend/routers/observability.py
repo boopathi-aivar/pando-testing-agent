@@ -3,6 +3,7 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 
 from observability.registry import list_projects
 from routers.auth import get_current_user
@@ -65,6 +66,58 @@ def get_invoice_detail(
     if not detail:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return detail
+
+
+@router.get("/{project_id}/invoices/{email_id}/{attachment_id}/pdf")
+def get_invoice_pdf(
+    project_id: str,
+    email_id: str,
+    attachment_id: str,
+    _user=Depends(get_current_user),
+):
+    """Stream the original invoice PDF for in-app viewing."""
+    try:
+        body, filename, content_type = observability_logs.get_invoice_pdf_bytes(
+            project_id, email_id, attachment_id
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF fetch error: {str(e)}") from e
+
+    # inline so browsers / iframe can render; filename for Save As
+    safe_name = filename.replace('"', "")
+    return Response(
+        content=body,
+        media_type=content_type or "application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{safe_name}"',
+            "Cache-Control": "private, max-age=60",
+        },
+    )
+
+
+@router.get("/{project_id}/invoices/{email_id}/{attachment_id}/cloudwatch-link")
+def get_cloudwatch_link(
+    project_id: str,
+    email_id: str,
+    attachment_id: str,
+    _user=Depends(get_current_user),
+):
+    """
+    Resolve a CloudWatch console URL for this invoice's [$LATEST] log stream
+    (the page you get after clicking the stream name), with filter + time window.
+    """
+    try:
+        return observability_logs.resolve_cloudwatch_link(
+            project_id, email_id, attachment_id
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"CloudWatch link error: {str(e)}"
+        ) from e
 
 
 @router.get("/{project_id}/stats")
