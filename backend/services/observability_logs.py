@@ -9,19 +9,26 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
+from urllib.parse import quote
 
 from boto3.dynamodb.conditions import Attr, Key
 from botocore.config import Config
 from fastapi import HTTPException
 
-from config import settings
-from observability.registry import get_project, list_projects, session_for_account
+from config import make_source_aws_session, settings
+from observability.registry import (
+    CLOUDWATCH_CONSOLE_ACCOUNT_ID,
+    get_project,
+    list_projects,
+    session_for_account,
+)
 
 log = logging.getLogger("observability_logs")
 
@@ -468,7 +475,400 @@ def get_invoice_detail(project_id: str, email_id: str, attachment_id: str) -> di
     else:
         base["api_payload"] = None
 
+    pdf_loc = resolve_invoice_pdf_location(base)
+    base["has_pdf"] = pdf_loc is not None
+    if pdf_loc:
+        base["pdf_bucket"] = pdf_loc[0]
+        base["pdf_key"] = pdf_loc[1]
+    base["cloudwatch_url"] = build_cloudwatch_url(
+        project_id,
+        attachment_id=base.get("attachment_id") or attachment_id,
+        email_id=base.get("email_id") or email_id,
+        invoice_number=base.get("invoice_number") or "",
+        created_at=base.get("created_at_iso") or base.get("created_at"),
+        completed_at=base.get("completed_at_iso") or base.get("updated_at_iso"),
+    )
+    project = get_project(project_id)
+    base["cloudwatch_log_group"] = (project.cloudwatch_log_group if project else "") or ""
+    base["cloudwatch_account_id"] = CLOUDWATCH_CONSOLE_ACCOUNT_ID
+
     return base
+
+
+_S3_URI_RE = re.compile(r"^s3://([^/]+)/(.+)$", re.IGNORECASE)
+
+
+def _parse_s3_uri(uri: str) -> tuple[str, str] | None:
+    if not uri or not isinstance(uri, str):
+        return None
+    m = _S3_URI_RE.match(uri.strip())
+    if not m:
+        return None
+    return m.group(1), m.group(2)
+
+
+def _payload_invoice_rows(api_payload) -> list[dict]:
+    if api_payload is None:
+        return []
+    if isinstance(api_payload, str):
+        try:
+            api_payload = json.loads(api_payload)
+        except Exception:
+            return []
+    if isinstance(api_payload, list):
+        return [r for r in api_payload if isinstance(r, dict)]
+    if isinstance(api_payload, dict):
+        data = api_payload.get("data")
+        if isinstance(data, list):
+            return [r for r in data if isinstance(r, dict)]
+        return [api_payload]
+    return []
+
+
+def resolve_invoice_pdf_location(detail: dict) -> tuple[str, str] | None:
+    """
+    Resolve the invoice PDF (bucket, key) for an observability attachment.
+    Prefer DynamoDB s3_path, then api_payload.custom.attachment_*, then documents_attachment.
+    """
+    parsed = _parse_s3_uri(str(detail.get("s3_path") or ""))
+    if parsed:
+        return parsed
+
+    for row in _payload_invoice_rows(detail.get("api_payload")):
+        custom = row.get("custom") or {}
+        if isinstance(custom, dict):
+            bucket = (custom.get("attachment_bucket") or "").strip()
+            key = (custom.get("attachment_key") or "").strip()
+            if bucket and key:
+                return bucket, key.lstrip("/")
+
+        docs = row.get("documents_attachment") or []
+        if isinstance(docs, list) and docs:
+            preferred = None
+            for doc in docs:
+                if not isinstance(doc, dict):
+                    continue
+                ext = str(doc.get("file_extension") or "").lower()
+                path = str(doc.get("file_path") or "").strip()
+                bucket = str(doc.get("bucket_name") or "").strip()
+                if not bucket or not path:
+                    continue
+                if ext and ext != "pdf" and not path.lower().endswith(".pdf"):
+                    continue
+                dtype = str(doc.get("type") or "").lower()
+                if "freight" in dtype or "invoice" in dtype:
+                    preferred = (bucket, path.lstrip("/"))
+                    break
+                if preferred is None:
+                    preferred = (bucket, path.lstrip("/"))
+            if preferred:
+                return preferred
+
+    return None
+
+
+def build_cloudwatch_url(
+    project_id: str,
+    *,
+    attachment_id: str = "",
+    email_id: str = "",
+    invoice_number: str = "",
+    created_at: str | int | float | None = None,
+    completed_at: str | int | float | None = None,
+    log_stream_name: str | None = None,
+    region: str | None = None,
+    pad_before_minutes: int = 30,
+    pad_after_hours: int = 3,
+) -> str | None:
+    """
+    AWS Console deep-link to the project's invoice Lambda logs.
+
+    Prefer a specific log stream (the [$LATEST] stream you open after
+    clicking a stream name). Falls back to filtered All-events search.
+    """
+    project = get_project(project_id)
+    log_group = (project.cloudwatch_log_group if project else "") or ""
+    if not log_group:
+        return None
+
+    filter_term = (attachment_id or email_id or invoice_number or "").strip()
+    if not filter_term:
+        return None
+
+    cw_region = (
+        region
+        or (project.region if project else None)
+        or settings.SOURCE_ACCOUNT_REGION
+        or settings.AWS_REGION
+        or "us-east-1"
+    )
+
+    start_ms, end_ms = _cloudwatch_time_window(
+        created_at=created_at,
+        completed_at=completed_at,
+        pad_before_minutes=pad_before_minutes,
+        pad_after_hours=pad_after_hours,
+    )
+
+    # CloudWatch console hash uses: encodeURIComponent(path).replace(/%/g, '$')
+    # Query values are URI-encoded first so quotes become %22 → $2522.
+    lg_enc = quote(quote(log_group, safe=""), safe="").replace("%", "$")
+
+    # Quotes are required: unquoted UUIDs (hyphens) match 0 events.
+    params = [f"filterPattern={quote(f'\"{filter_term}\"', safe='')}"]
+    if start_ms is not None:
+        params.append(f"start={start_ms}")
+    if end_ms is not None:
+        params.append(f"end={end_ms}")
+    query_enc = quote("?" + "&".join(params), safe="").replace("%", "$")
+
+    # Specific stream path: .../log-events/{stream}?filter&start&end
+    # vs All events:       .../log-events?filter&start&end
+    if log_stream_name:
+        stream_enc = quote(quote(log_stream_name, safe=""), safe="").replace("%", "$")
+        return (
+            f"https://{cw_region}.console.aws.amazon.com/cloudwatch/home"
+            f"?region={cw_region}#logsV2:log-groups/log-group/{lg_enc}"
+            f"/log-events/{stream_enc}{query_enc}"
+        )
+
+    return (
+        f"https://{cw_region}.console.aws.amazon.com/cloudwatch/home"
+        f"?region={cw_region}#logsV2:log-groups/log-group/{lg_enc}"
+        f"/log-events{query_enc}"
+    )
+
+
+def find_cloudwatch_log_stream(
+    project_id: str,
+    *,
+    attachment_id: str = "",
+    email_id: str = "",
+    invoice_number: str = "",
+    created_at: str | int | float | None = None,
+    completed_at: str | int | float | None = None,
+) -> str | None:
+    """
+    Look up the Lambda log stream that contains this invoice's events
+    (e.g. 2026/09/28/[$LATEST]8cb7df59...).
+    """
+    project = get_project(project_id)
+    log_group = (project.cloudwatch_log_group if project else "") or ""
+    if not log_group:
+        return None
+
+    filter_term = (attachment_id or email_id or invoice_number or "").strip()
+    if not filter_term:
+        return None
+
+    start_ms, end_ms = _cloudwatch_time_window(
+        created_at=created_at,
+        completed_at=completed_at,
+        pad_before_minutes=30,
+        pad_after_hours=3,
+    )
+    if start_ms is None or end_ms is None:
+        # Broad fallback if timestamps missing
+        end_ms = int(datetime.now(tz=timezone.utc).timestamp() * 1000)
+        start_ms = end_ms - 7 * 24 * 3600 * 1000
+
+    try:
+        client = make_source_aws_session().client("logs", region_name="us-east-1")
+        resp = client.filter_log_events(
+            logGroupName=log_group,
+            startTime=start_ms,
+            endTime=end_ms,
+            filterPattern=f'"{filter_term}"',
+            limit=10,
+            interleaved=True,
+        )
+        events = resp.get("events") or []
+        if not events:
+            return None
+        # Prefer the stream that has the most matching events in this page
+        counts: dict[str, int] = {}
+        for ev in events:
+            name = ev.get("logStreamName") or ""
+            if name:
+                counts[name] = counts.get(name, 0) + 1
+        if not counts:
+            return None
+        return max(counts.items(), key=lambda kv: kv[1])[0]
+    except Exception as exc:
+        log.warning(
+            "CloudWatch stream lookup failed project=%s filter=%s: %s",
+            project_id,
+            filter_term,
+            exc,
+        )
+        return None
+
+
+def resolve_cloudwatch_link(
+    project_id: str, email_id: str, attachment_id: str
+) -> dict:
+    """
+    Resolve a deep link to the invoice's [$LATEST] log stream (preferred),
+    falling back to filtered All-events search.
+    """
+    detail = get_invoice_detail(project_id, email_id, attachment_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    stream = find_cloudwatch_log_stream(
+        project_id,
+        attachment_id=detail.get("attachment_id") or attachment_id,
+        email_id=detail.get("email_id") or email_id,
+        invoice_number=detail.get("invoice_number") or "",
+        created_at=detail.get("created_at_iso") or detail.get("created_at"),
+        completed_at=detail.get("completed_at_iso") or detail.get("updated_at_iso"),
+    )
+
+    url = build_cloudwatch_url(
+        project_id,
+        attachment_id=detail.get("attachment_id") or attachment_id,
+        email_id=detail.get("email_id") or email_id,
+        invoice_number=detail.get("invoice_number") or "",
+        created_at=detail.get("created_at_iso") or detail.get("created_at"),
+        completed_at=detail.get("completed_at_iso") or detail.get("updated_at_iso"),
+        log_stream_name=stream,
+    )
+    if not url:
+        raise HTTPException(
+            status_code=404,
+            detail="CloudWatch log group not configured for this project",
+        )
+
+    project = get_project(project_id)
+    return {
+        "url": url,
+        "log_group": (project.cloudwatch_log_group if project else "") or "",
+        "log_stream": stream,
+        "account_id": CLOUDWATCH_CONSOLE_ACCOUNT_ID,
+    }
+
+
+def _parse_any_ts(value: str | int | float | None) -> datetime | None:
+    """Parse ISO strings or epoch seconds/ms into an aware UTC datetime."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, (int, float)) or (isinstance(value, str) and value.strip().isdigit()):
+        try:
+            n = float(value)
+            # Heuristic: ms vs seconds
+            if n > 1e12:
+                n = n / 1000.0
+            return datetime.fromtimestamp(n, tz=timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            return None
+    if isinstance(value, str):
+        raw = value.strip()
+        try:
+            dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc)
+        except ValueError:
+            return None
+    return None
+
+
+def _cloudwatch_time_window(
+    *,
+    created_at: str | int | float | None,
+    completed_at: str | int | float | None,
+    pad_before_minutes: int,
+    pad_after_hours: int,
+) -> tuple[int | None, int | None]:
+    """
+    Build [start_ms, end_ms] around ingestion time.
+    Falls back to (None, None) if we have no usable timestamp.
+    """
+    created = _parse_any_ts(created_at)
+    completed = _parse_any_ts(completed_at)
+    if not created and not completed:
+        return None, None
+
+    anchor_start = created or completed
+    assert anchor_start is not None
+    start = anchor_start - timedelta(minutes=max(0, pad_before_minutes))
+
+    # Prefer completed + padding; otherwise created + pad_after_hours
+    if completed and completed >= anchor_start:
+        end = completed + timedelta(minutes=30)
+    else:
+        end = anchor_start + timedelta(hours=max(1, pad_after_hours))
+
+    # Never let the window end before start
+    if end <= start:
+        end = start + timedelta(hours=1)
+
+    return int(start.timestamp() * 1000), int(end.timestamp() * 1000)
+
+
+def _s3_clients_for_pdf(project_id: str):
+    """Try source-account first (prod invoice buckets), then project ops/meta session."""
+    clients = []
+    try:
+        clients.append(make_source_aws_session().client("s3", region_name="us-east-1"))
+    except Exception as exc:
+        log.warning("PDF: source S3 session unavailable: %s", exc)
+    try:
+        clients.append(_s3_client_for_project(project_id))
+    except Exception as exc:
+        log.warning("PDF: project S3 session unavailable: %s", exc)
+    return clients
+
+
+def get_invoice_pdf_bytes(
+    project_id: str, email_id: str, attachment_id: str
+) -> tuple[bytes, str, str]:
+    """
+    Fetch the invoice PDF bytes for an attachment.
+    Returns (bytes, filename, content_type).
+    """
+    detail = get_invoice_detail(project_id, email_id, attachment_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    loc = resolve_invoice_pdf_location(detail)
+    if not loc:
+        raise HTTPException(
+            status_code=404,
+            detail="No PDF location found on this invoice (missing s3_path / attachment key).",
+        )
+
+    bucket, key = loc
+    filename = (
+        (detail.get("filename") or "").strip()
+        or key.rsplit("/", 1)[-1]
+        or f"{attachment_id}.pdf"
+    )
+    clients = _s3_clients_for_pdf(project_id)
+    if not clients:
+        raise HTTPException(status_code=503, detail="No S3 credentials available to fetch PDF.")
+
+    last_err: Exception | None = None
+    for s3 in clients:
+        try:
+            resp = s3.get_object(Bucket=bucket, Key=key)
+            body = resp["Body"].read()
+            content_type = resp.get("ContentType") or "application/pdf"
+            return body, filename, content_type
+        except Exception as exc:
+            last_err = exc
+            log.warning(
+                "PDF fetch failed project=%s bucket=%s key=%s: %s",
+                project_id,
+                bucket,
+                key,
+                exc,
+            )
+
+    raise HTTPException(
+        status_code=502,
+        detail=f"Failed to download PDF from s3://{bucket}/{key}: {last_err}",
+    )
 
 
 def get_stats(
