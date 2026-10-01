@@ -153,6 +153,37 @@ def test_expected_from_pdf_fills_unverified_rows():
     assert result["overall_score"] == 100.0
 
 
+def test_expected_from_pdf_matches_camelcase_keys():
+    result = {
+        "status": "failed",
+        "overall_score": 0,
+        "expected_from_pdf": {
+            "invoiceNumber": "35791570",
+            "invoiceDate": "08-Jul-2026",
+        },
+        "field_validations": [
+            {
+                "field_name": "invoice_number",
+                "expected_value": None,
+                "actual_value": "35791570",
+                "status": "unverified",
+                "is_mandatory": True,
+            },
+            {
+                "field_name": "invoice_date",
+                "expected_value": None,
+                "actual_value": "08-Jul-2026",
+                "status": "unverified",
+                "is_mandatory": True,
+            },
+        ],
+    }
+    apply_comparison(result, mandatory_fields=["invoice_number", "invoice_date"])
+    by_name = {v["field_name"]: v for v in result["field_validations"]}
+    assert by_name["invoice_number"]["status"] == "correct"
+    assert by_name["invoice_date"]["status"] == "correct"
+
+
 def test_score_uses_required_fields_only():
     result = {
         "status": "passed",

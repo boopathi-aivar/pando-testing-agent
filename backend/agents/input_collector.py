@@ -15,6 +15,7 @@ from services.s3 import get_object, get_binary
 from services.excel_parser import parse_field_mapping, parse_charge_mapping
 from services.pdf_parser import parse_pdf
 from services.cache import content_key, excel_mapping_cache, pdf_markdown_cache
+from services.prompt_template import PROMPT_TEMPLATE_SLOT_ID
 
 
 def run_input_collector(project_config: dict, vendor_ref_id: str = "") -> dict:
@@ -50,6 +51,15 @@ def run_input_collector(project_config: dict, vendor_ref_id: str = "") -> dict:
         slot_id = slot["id"]
 
         try:
+            if slot_id == PROMPT_TEMPLATE_SLOT_ID:
+                collected[slot_id] = json.dumps({
+                    "type": "prompt_template_s3",
+                    "s3_bucket": bucket,
+                    "s3_key": key,
+                    "note": "Per-carrier prompt is resolved at scoring time.",
+                })
+                print(f"[InputCollector] Prompt template slot noted — s3://{bucket}/{key}")
+                continue
             if key.lower().endswith((".xlsx", ".xls")):
                 _collect_excel(collected, slot_id, bucket, key, vendor_ref_id)
             else:

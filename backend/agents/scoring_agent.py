@@ -3,8 +3,11 @@ Scoring Agent
 Validates invoice payloads using a two-phase LLM approach:
 
   Phase 1 — PDF Extraction
-    Claude independently reads the invoice PDF and extracts the EXPECTED field values.
-    This is the ground truth — what the invoice actually says.
+    Claude reads RapidOCR / native PDF text (with bounding boxes) using the
+    matched carrier prompt from the project S3 Prompt Template slot. That
+    prompt is what tells the model where each field lives. Generic extraction
+    is only used when no S3 template is configured. Never copy the Lambda
+    payload into expected.
 
   Phase 2 — Actual vs Expected Scoring
     Claude compares the ACTUAL payload (sent by the invoice processor Lambda)
@@ -14,6 +17,7 @@ This gives true actual-vs-expected comparison, not just "is the field present?"
 """
 
 import json
+import re
 from strands import Agent
 from strands.models.bedrock import BedrockModel
 from config import settings
@@ -24,6 +28,11 @@ from services.markdown_expected import (
     merge_expected,
     parse_expected_from_markdown,
     usable_expected,
+)
+from services.pdf_parser import format_ocr_layout
+from services.prompt_template import (
+    get_carrier_prompt_for_project,
+    split_carrier_prompt,
 )
 
 
@@ -150,31 +159,176 @@ Respond with ONLY a valid JSON object — no text outside it:
 
 # ── Model factory ──────────────────────────────────────────────────────────────
 
-def _make_model() -> BedrockModel:
+def _make_model(max_tokens: int = 8192) -> BedrockModel:
     return BedrockModel(
         region_name=settings.AWS_REGION,
         model_id=settings.BEDROCK_MODEL_ID,
-        max_tokens=8192,
+        max_tokens=max_tokens,
     )
 
 
 # ── Phase 1: PDF extraction ────────────────────────────────────────────────────
 
-def _extract_expected_from_pdf(pdf_markdown: str) -> dict:
-    """
-    Build expected JSON from invoice markdown.
+def _carrier_identity(payload: dict | None) -> tuple[str | None, str | None]:
+    """Vendor name + vendor_ref_id from the processor payload (lookup keys only)."""
+    payload = payload or {}
+    custom = payload.get("custom") if isinstance(payload.get("custom"), dict) else {}
+    name = None
+    for val in (
+        custom.get("vendor_name"),
+        payload.get("vendor_name"),
+        payload.get("carrier"),
+        payload.get("carrier_name"),
+    ):
+        if isinstance(val, str) and val.strip():
+            name = val.strip()
+            break
+    ref = (
+        payload.get("vendor_reference_id")
+        or payload.get("vendor_ref_id")
+        or custom.get("vendor_reference_id")
+        or custom.get("vendor_ref_id")
+        or ""
+    )
+    ref = str(ref).strip() or None
+    return name, ref
 
-    1. Always parse labeled fields from the markdown (OCR / native text).
-    2. Try Claude on the same markdown.
-    3. If Claude errors or returns nothing, keep the parsed content.
-       Never invent expected from the Lambda payload.
+
+def _canonical_field_key(key: str) -> str:
+    raw = str(key or "").strip()
+    if not raw:
+        return raw
+    snake = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", raw)
+    snake = re.sub(r"[\s\-]+", "_", snake)
+    return snake.lower().strip("_")
+
+
+def _unwrap_extracted_value(val):
+    if isinstance(val, dict) and "value" in val:
+        extra = set(val.keys()) - {"value", "explanation", "reason", "confidence"}
+        if not extra:
+            return val.get("value")
+    return val
+
+
+def _flatten_extracted(obj: dict) -> dict:
+    """Lift nested custom.* / {value, explanation} / camelCase into scoring keys."""
+    if not isinstance(obj, dict):
+        return {}
+    merged = {k: v for k, v in obj.items() if k != "custom"}
+    custom = obj.get("custom")
+    if isinstance(custom, dict):
+        for k, v in custom.items():
+            if k not in merged or merged.get(k) in (None, "", []):
+                merged[k] = v
+    out: dict = {}
+    for k, v in merged.items():
+        key = _canonical_field_key(k)
+        val = _unwrap_extracted_value(v)
+        if key and (key not in out or out.get(key) in (None, "", [])):
+            out[key] = val
+        if k not in out:
+            out[k] = val
+    return out
+
+
+def _parse_extraction_json(text: str) -> dict:
+    raw = (text or "").strip()
+    if not raw:
+        return {}
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?", "", raw, flags=re.I).strip()
+        raw = re.sub(r"```$", "", raw).strip()
+    start = raw.find("{")
+    end = raw.rfind("}") + 1
+    if start < 0 or end <= start:
+        print("[ScoringAgent] Phase 1 LLM returned no JSON object.")
+        return {}
+    snippet = raw[start:end]
+    try:
+        llm = json.loads(snippet)
+    except json.JSONDecodeError as e:
+        print(f"[ScoringAgent] Phase 1 JSON parse failed ({e}); snippet={snippet[:180]!r}")
+        return {}
+    if not isinstance(llm, dict):
+        return {}
+    return _flatten_extracted(llm)
+
+
+def _run_extraction_llm(system_prompt: str, user_message: str, *, max_tokens: int) -> dict:
+    agent = Agent(model=_make_model(max_tokens), tools=[], system_prompt=system_prompt)
+    return _parse_extraction_json(str(agent(user_message)).strip())
+
+
+_CARRIER_JSON_REMINDER = """
+Follow the carrier extraction rules above exactly — including where each field
+is located on the invoice (labels, header/body, mapped codes). The invoice text
+is RapidOCR or native PDF text with [x0,y0-x1,y1] boxes in PDF points. Use those
+positions when the prompt tells you where to read a value. Return only the JSON
+object the carrier prompt specifies. Do not copy a processor payload.
+"""
+
+
+def _invoice_text_for_carrier(pdf_markdown: str, layout: list | None) -> str:
+    laid_out = format_ocr_layout(layout)
+    if laid_out:
+        return laid_out
+    return (pdf_markdown or "")[:32000]
+
+
+def _extract_expected_from_pdf(
+    pdf_markdown: str,
+    *,
+    project_config: dict | None = None,
+    payload: dict | None = None,
+    layout: list | None = None,
+) -> dict:
+    """
+    Build expected JSON from invoice OCR + the client S3 carrier prompt.
+
+    1. Parse labeled fields from RapidOCR / native markdown (safety net).
+    2. If the project has a Prompt Template slot, always run that carrier
+       prompt against the OCR text+boxes — that is what tells the model
+       where each field lives. Do not switch to the generic extractor.
+    3. Never invent expected from the Lambda payload.
     """
     parsed = parse_expected_from_markdown(pdf_markdown)
     if not pdf_markdown or not pdf_markdown.strip():
         print("[ScoringAgent] No PDF content — skipping expected-value extraction.")
         return parsed
 
-    cache_id = content_key("pdf-expected", pdf_markdown)
+    carrier_name, vendor_ref_id = _carrier_identity(payload)
+    carrier_prompt, matched_key = (None, None)
+    if project_config:
+        carrier_prompt, matched_key = get_carrier_prompt_for_project(
+            project_config,
+            carrier_name=carrier_name,
+            vendor_ref_id=vendor_ref_id,
+        )
+
+    invoice_text = _invoice_text_for_carrier(pdf_markdown, layout)
+    user_message = None
+    if carrier_prompt:
+        system_prompt, invoice_tail = split_carrier_prompt(carrier_prompt, invoice_text)
+        system_prompt = system_prompt.rstrip() + "\n" + _CARRIER_JSON_REMINDER
+        user_message = invoice_tail
+        prompt_tag = matched_key or "carrier"
+        print(
+            f"[ScoringAgent] Phase 1 S3 carrier prompt {matched_key!r} "
+            f"({len(carrier_prompt)} chars) + OCR layout ({len(invoice_text)} chars) "
+            f"for {carrier_name or vendor_ref_id!r}"
+        )
+        print(f"[ScoringAgent] Prompt preview: {system_prompt[:200]!r}")
+    else:
+        system_prompt = _EXTRACTION_PROMPT
+        user_message = (
+            f"Extract all invoice field values from this invoice PDF:\n\n"
+            f"---\n{pdf_markdown[:8000]}\n---"
+        )
+        prompt_tag = "generic"
+        print("[ScoringAgent] Phase 1 using generic extraction prompt (no S3 carrier template).")
+
+    cache_id = content_key("pdf-expected", invoice_text, prompt_tag, system_prompt[:4000])
     cached = pdf_expected_cache.get(cache_id)
     if cached is not None and usable_expected(cached):
         print(f"[ScoringAgent] PDF expected values cache hit ({len(cached)} fields).")
@@ -182,27 +336,31 @@ def _extract_expected_from_pdf(pdf_markdown: str) -> dict:
 
     llm: dict = {}
     try:
-        agent = Agent(model=_make_model(), tools=[], system_prompt=_EXTRACTION_PROMPT)
-        result = agent(
-            f"Extract all invoice field values from this invoice PDF:\n\n"
-            f"---\n{pdf_markdown[:8000]}\n---"
-        )
-        text = str(result).strip()
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start >= 0 and end > start:
-            llm = json.loads(text[start:end])
-            if not isinstance(llm, dict):
-                llm = {}
-            print(f"[ScoringAgent] LLM extracted {len(llm)} expected fields from PDF.")
+        max_tokens = 16384 if carrier_prompt else 8192
+        llm = _run_extraction_llm(system_prompt, user_message, max_tokens=max_tokens)
+        print(f"[ScoringAgent] LLM extracted {len(llm)} expected fields from PDF.")
     except Exception as e:
-        print(f"[ScoringAgent] PDF extraction LLM failed — using parsed markdown: {e}")
+        print(f"[ScoringAgent] PDF extraction LLM failed — {e}")
         llm = {}
+
+    if carrier_prompt and not usable_expected(llm):
+        print("[ScoringAgent] Carrier extract unusable — retrying the same S3 prompt (not generic).")
+        retry_user = (
+            user_message
+            + "\n\nYour previous reply was not valid JSON. "
+            "Return only the JSON object defined in the carrier prompt."
+        )
+        try:
+            llm = _run_extraction_llm(system_prompt, retry_user, max_tokens=16384)
+            print(f"[ScoringAgent] Carrier retry extracted {len(llm)} expected fields.")
+        except Exception as e:
+            print(f"[ScoringAgent] Carrier prompt retry failed: {e}")
+            llm = {}
 
     if not usable_expected(llm):
         print(
             f"[ScoringAgent] LLM expected empty/unusable — "
-            f"using parsed markdown ({len(parsed)} fields)."
+            f"using parsed OCR labels ({len(parsed)} fields)."
         )
         expected = parsed
     else:
@@ -212,7 +370,7 @@ def _extract_expected_from_pdf(pdf_markdown: str) -> dict:
         pdf_expected_cache.set(cache_id, expected)
         print(f"[ScoringAgent] Expected fields ready: {list(expected.keys())}")
     else:
-        print("[ScoringAgent] No usable expected values from markdown or LLM.")
+        print("[ScoringAgent] No usable expected values from OCR or carrier prompt.")
     return expected
 
 
@@ -277,8 +435,12 @@ def _run_scoring(
     )
 
     collected = input_files.get("collected", {})
+    mapping_payload = {
+        k: v for k, v in collected.items()
+        if k not in ("prompt-template", "runtime-prompt")
+    }
     mapping_section = json.dumps(
-        {k: (v[:500] + "...") if len(str(v)) > 500 else v for k, v in collected.items()},
+        {k: (v[:500] + "...") if len(str(v)) > 500 else v for k, v in mapping_payload.items()},
         indent=2,
     )
 
@@ -404,7 +566,12 @@ def run_scoring_agent(
 
     # Phase 1 ─────────────────────────────────────────────────────────────────
     print("[ScoringAgent] Phase 1: Extracting expected values from invoice PDF…")
-    expected_values = _extract_expected_from_pdf(invoice_pdf)
+    expected_values = _extract_expected_from_pdf(
+        invoice_pdf,
+        project_config=project_config,
+        payload=log_analysis.get("payload") or {},
+        layout=log_analysis.get("invoice_pdf_layout") or [],
+    )
 
     # Phase 2 ─────────────────────────────────────────────────────────────────
     print("[ScoringAgent] Phase 2: Scoring actual vs expected…")

@@ -434,9 +434,13 @@ def _lookup_expected(expected_from_pdf: dict | None, field_name: str) -> Any:
         return None
     fname = field_name.lower().strip()
     base = _base_field_name(field_name)
+    compact = re.sub(r"[^a-z0-9]", "", fname)
     for key, val in expected_from_pdf.items():
-        if key.lower() in (fname, base) and not is_empty_expected(val):
-            return val
+        k = str(key).lower()
+        k_compact = re.sub(r"[^a-z0-9]", "", k)
+        if k in (fname, base) or k_compact == compact:
+            if not is_empty_expected(val):
+                return val
     return None
 
 
