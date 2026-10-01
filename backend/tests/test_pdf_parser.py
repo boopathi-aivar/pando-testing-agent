@@ -5,6 +5,7 @@ import os
 from services.pdf_parser import (
     pdf_to_markdown,
     parse_pdf,
+    format_ocr_layout,
     _needs_ocr,
     _parse_rapid_result,
     _parse_paddle_result,
@@ -80,3 +81,21 @@ def test_paddleocr_result_includes_boxes():
     assert items[0]["text"] == "Invoice #: 11448"
     assert items[0]["poly"][2] == [80.0, 40.0]
     assert items[1]["score"] == 0.88
+
+
+def test_format_ocr_layout_includes_boxes():
+    text = format_ocr_layout([
+        {
+            "page": 1,
+            "source": "rapidocr",
+            "width": 612,
+            "height": 792,
+            "items": [
+                {"text": "Invoice Date: 10-Sep-2026", "bbox": [12, 40, 200, 52]},
+                {"text": "Invoice #: 804890186", "bbox": [12, 60, 180, 72]},
+            ],
+        }
+    ])
+    assert "[12.0,40.0-200.0,52.0] Invoice Date: 10-Sep-2026" in text
+    assert "804890186" in text
+    assert "(rapidocr)" in text

@@ -23,6 +23,7 @@ from database import tbl_projects
 from tools.dynamodb_tools import save_test_result, update_project_last_tested, _from_dynamo
 from agents.input_collector import run_input_collector, collect_invoice_pdf_parsed
 from agents.scoring_agent import run_scoring_agent
+from services.prompt_template import slot_from_project
 
 
 # ── Project resolution ────────────────────────────────────────────────────────
@@ -162,7 +163,14 @@ def process_intake(intake_data: dict) -> dict:
     input_files = run_input_collector(project, vendor_ref_id=vendor_ref_id)
 
     if intake_data.get("prompt"):
-        input_files.setdefault("collected", {})["prompt-template"] = intake_data["prompt"]
+        bucket, key = slot_from_project(project)
+        if bucket and key:
+            print(
+                "[Intake] S3 prompt-template slot is configured — "
+                "not using the CloudWatch runtime prompt for expected extraction."
+            )
+        else:
+            input_files.setdefault("collected", {})["runtime-prompt"] = intake_data["prompt"]
 
     print("[Intake] Fetching invoice PDF from S3…")
     parsed_pdf = collect_invoice_pdf_parsed(payload)

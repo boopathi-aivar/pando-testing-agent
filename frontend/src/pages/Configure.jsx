@@ -9,15 +9,37 @@ import RunTestModal from '../components/results/RunTestModal'
 const STEPS = ['Basic Info', 'Source Files', 'Test Config', 'Review & Save']
 
 // Slots that are auto-collected from CloudWatch — never shown to the user
-const CLOUDWATCH_SLOT_IDS = new Set(['prompt-template', 'llm-response-sample'])
+const CLOUDWATCH_SLOT_IDS = new Set(['llm-response-sample'])
 // Slots removed from the product — filter out if present in saved data
 const REMOVED_SLOT_IDS = new Set(['carrier-mapping', 'custom-mapping-1', 'custom-mapping-2'])
 
+const PROMPT_TEMPLATE_SLOT = {
+  id: 'prompt-template',
+  label: 'Prompt Template',
+  required: false,
+  enabled: false,
+  s3_bucket: '',
+  s3_key: '',
+  description: 'Client S3 object with PROMPT_TEMPLATES for every carrier. After the carrier is identified, only that carrier’s prompt is used for expected extraction.',
+  isCustom: false,
+}
+
 const DEFAULT_FILE_SLOTS = [
+  PROMPT_TEMPLATE_SLOT,
   { id: 'field-mapping-sheet', label: 'Field Mapping Sheet', required: false, enabled: false, s3_bucket: '', s3_key: '', description: 'Excel/CSV mapping expected output fields to sources', isCustom: false },
   { id: 'charge-mapping',      label: 'Charge Mapping',      required: false, enabled: false, s3_bucket: '', s3_key: '', description: 'Charge code mapping stored in S3',                  isCustom: false },
   { id: 'country-code-mapping',label: 'Country Code Mapping',required: false, enabled: false, s3_bucket: '', s3_key: '', description: 'Country code lookup table',                        isCustom: false },
 ]
+
+function withDefaultSlots(slots) {
+  const filtered = (slots ?? DEFAULT_FILE_SLOTS).filter(
+    (s) => !CLOUDWATCH_SLOT_IDS.has(s.id) && !REMOVED_SLOT_IDS.has(s.id)
+  )
+  if (!filtered.some((s) => s.id === 'prompt-template')) {
+    return [PROMPT_TEMPLATE_SLOT, ...filtered]
+  }
+  return filtered
+}
 
 function makeCustomSlot() {
   return { id: `custom-${Date.now()}`, label: 'Custom Mapping', required: false, enabled: false, s3_bucket: '', s3_key: '', description: 'Custom mapping file', isCustom: true }
@@ -52,9 +74,7 @@ export default function Configure() {
         project_id: project.project_id ?? '',
         cloudwatch_log_group: project.cloudwatch_log_group ?? '',
         target_api_url: project.target_api_url || `${window.location.origin}/api`,
-        file_slots: (project.file_slots ?? DEFAULT_FILE_SLOTS).filter(
-          (s) => !CLOUDWATCH_SLOT_IDS.has(s.id) && !REMOVED_SLOT_IDS.has(s.id)
-        ),
+        file_slots: withDefaultSlots(project.file_slots),
         scoring_weights: project.scoring_weights ?? { charge_fields: 25, address_fields: 25, date_fields: 25, amount_fields: 25 },
         mandatory_fields: project.mandatory_fields ?? [],
       })
@@ -183,8 +203,9 @@ function Step2({ config, updateSlot, addSlot, removeSlot }) {
       <div className="mb-6">
         <h2 className="text-text-primary font-bold text-lg">Source Files</h2>
         <p className="text-text-muted text-sm mt-0.5">
-          Prompt and LLM response are collected automatically from CloudWatch.
-          Toggle on any additional mapping files stored in S3.
+          Point Prompt Template at the client S3 object that holds PROMPT_TEMPLATES
+          for every carrier. The testing agent identifies the carrier, then uses
+          only that carrier’s prompt for expected extraction. Mapping sheets stay optional.
         </p>
       </div>
 

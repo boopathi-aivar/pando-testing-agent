@@ -81,11 +81,11 @@ export default function FileSlotRow({ slot, onChange, isCustom, onRemove }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-text-muted text-xs font-medium mb-1.5">S3 Bucket Name</label>
-              <input type="text" placeholder="my-invoice-bucket" value={slot.s3_bucket} onChange={(e) => onChange({ ...slot, s3_bucket: e.target.value })} className="w-full text-sm" />
+              <input type="text" placeholder={slot.id === 'prompt-template' ? 'pando-general-electronics-destination-bucket-temp' : 'my-invoice-bucket'} value={slot.s3_bucket} onChange={(e) => onChange({ ...slot, s3_bucket: e.target.value })} className="w-full text-sm" />
             </div>
             <div>
               <label className="block text-text-muted text-xs font-medium mb-1.5">S3 File Key</label>
-              <input type="text" placeholder="projects/ge/prompt-template.txt" value={slot.s3_key} onChange={(e) => onChange({ ...slot, s3_key: e.target.value })} className="w-full text-sm" />
+              <input type="text" placeholder={slot.id === 'prompt-template' ? 'templates/invoice/prompt_template.py' : 'path/to/file.xlsx'} value={slot.s3_key} onChange={(e) => onChange({ ...slot, s3_key: e.target.value })} className="w-full text-sm" />
             </div>
           </div>
           <p className="text-text-muted text-xs mt-2 flex items-center gap-1">

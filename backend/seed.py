@@ -9,6 +9,7 @@ from tools.dynamodb_tools import _to_dynamo
 
 # ── Default file slots ────────────────────────────────────────────────────────
 _SLOTS = [
+    {"id": "prompt-template",      "label": "Prompt Template",      "required": False, "enabled": False, "s3_bucket": "", "s3_key": "", "description": "Client S3 object with PROMPT_TEMPLATES for every carrier", "isCustom": False},
     {"id": "field-mapping-sheet",  "label": "Field Mapping Sheet",  "required": False, "enabled": False, "s3_bucket": "", "s3_key": "", "description": "Excel/CSV mapping expected output fields to sources", "isCustom": False},
     {"id": "charge-mapping",       "label": "Charge Mapping",       "required": False, "enabled": False, "s3_bucket": "", "s3_key": "", "description": "Charge code mapping stored in S3",                    "isCustom": False},
     {"id": "country-code-mapping", "label": "Country Code Mapping", "required": False, "enabled": False, "s3_bucket": "", "s3_key": "", "description": "Country code lookup table",                           "isCustom": False},

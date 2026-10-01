@@ -121,6 +121,39 @@ def parse_pdf(pdf_bytes: bytes) -> dict:
     return {"markdown": markdown, "pages": pages_out}
 
 
+def format_ocr_layout(pages: list[dict] | None, *, max_chars: int = 32000) -> str:
+    """
+    RapidOCR / native lines with PDF-point boxes so a carrier prompt can
+    follow 'take this field from the header / this label' instructions.
+    """
+    chunks: list[str] = []
+    for page in pages or []:
+        n = page.get("page")
+        src = page.get("source") or "ocr"
+        w = page.get("width")
+        h = page.get("height")
+        lines = [f"### Page {n} ({src}) size={w}x{h}"]
+        for it in page.get("items") or []:
+            text = str(it.get("text") or "").strip()
+            if not text:
+                continue
+            bbox = it.get("bbox") or []
+            if isinstance(bbox, (list, tuple)) and len(bbox) == 4:
+                try:
+                    x0, y0, x1, y1 = (round(float(v), 1) for v in bbox)
+                    lines.append(f"[{x0},{y0}-{x1},{y1}] {text}")
+                except (TypeError, ValueError):
+                    lines.append(text)
+            else:
+                lines.append(text)
+        if len(lines) > 1:
+            chunks.append("\n".join(lines))
+    out = "\n\n".join(chunks).strip()
+    if len(out) > max_chars:
+        return out[:max_chars] + "\n[ocr layout truncated]"
+    return out
+
+
 def _should_dump() -> bool:
     """Print OCR/native extraction in the terminal during local runs."""
     dump = os.getenv("PDF_OCR_DUMP", "").strip().lower()

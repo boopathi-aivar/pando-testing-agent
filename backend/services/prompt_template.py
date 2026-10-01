@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import ast
 import re
+from difflib import SequenceMatcher
 from typing import Any
 
 from botocore.exceptions import ClientError
@@ -375,3 +376,259 @@ def build_summary(bucket: str, key: str) -> dict[str, Any]:
             "rules": _dedupe(all_field_map_rules),
         },
     }
+
+
+PROMPT_TEMPLATE_SLOT_ID = "prompt-template"
+
+
+def load_templates(bucket: str, key: str) -> dict[str, Any]:
+    """Download and parse PROMPT_TEMPLATES from s3://bucket/key."""
+    if not (bucket or "").strip() or not (key or "").strip():
+        return {}
+    try:
+        return _load_prompt_templates(bucket.strip(), key.strip())
+    except Exception as e:
+        print(f"[PromptTemplate] Failed to load s3://{bucket}/{key}: {e}")
+        return {}
+
+
+def _norm(s: str) -> str:
+    return re.sub(r"[^A-Z0-9]+", "", (s or "").upper())
+
+
+# Same SCAC shortcuts the invoice processor uses when Claude returns a code.
+_SCAC_ALIASES = {
+    "CLIM": "CIRCLE_LOGISTICS_INC",
+    "PFBH": "PRIVATE_FLEET_BACKHAUL_LLC",
+    "PRSP": "PRECISION STRIP TRANSPORT",
+    "MSGR": "M_S_LOGISTICS_LLC",
+    "GPAB": "GP_TRANSCO",
+}
+
+CACHE_SPLIT_MARKER = "\n<<<PANDO_DYNAMIC_INVOICE_CONTENT>>>\n"
+
+
+def resolve_classified_carrier_name(
+    templates: dict[str, Any],
+    carrier_raw: str | None,
+) -> str | None:
+    """Map a carrier label to a PROMPT_TEMPLATES key (invoice_processor logic)."""
+    if not templates or not (carrier_raw or "").strip():
+        return None
+
+    supported_upper: dict[str, str] = {k.upper(): k for k in templates}
+    for k, data in templates.items():
+        if isinstance(data, dict):
+            display = str(data.get("carrier_name") or "").strip()
+            if display:
+                supported_upper.setdefault(display.upper(), k)
+
+    carrier = carrier_raw.strip().strip("'\"")
+    u = carrier.upper()
+    if u in supported_upper:
+        return supported_upper[u]
+    if f"{u}_LLC" in supported_upper:
+        return supported_upper[f"{u}_LLC"]
+    u_underscore = "_".join(u.split())
+    if u_underscore in supported_upper:
+        return supported_upper[u_underscore]
+    if f"{u_underscore}_LLC" in supported_upper:
+        return supported_upper[f"{u_underscore}_LLC"]
+    u_spaced = u.replace("_", " ")
+    if u_spaced in supported_upper:
+        return supported_upper[u_spaced]
+    spaced_llc = f"{u_spaced.replace(' ', '_')}_LLC"
+    if spaced_llc in supported_upper:
+        return supported_upper[spaced_llc]
+    if u in _SCAC_ALIASES:
+        canon = _SCAC_ALIASES[u].upper()
+        if canon in supported_upper:
+            return supported_upper[canon]
+    return None
+
+
+def _match_vendor_ref(templates: dict[str, Any], vendor_ref_id: str | None) -> str | None:
+    ref = str(vendor_ref_id or "").strip()
+    if not ref:
+        return None
+    for k, data in templates.items():
+        signal = _classification_signal(_template_prompt_text(data))
+        values = [str(v).strip() for v in (signal.get("values") or [])]
+        if ref in values or _norm(ref) in {_norm(v) for v in values}:
+            return k
+    if len(ref) < 3:
+        return None
+    pattern = re.compile(rf"\b{re.escape(ref)}\b", re.IGNORECASE)
+    for k, data in templates.items():
+        if pattern.search(_template_prompt_text(data)):
+            return k
+    return None
+
+
+def _fuzzy_carrier_key(templates: dict[str, Any], carrier_name: str) -> str | None:
+    n = _norm(carrier_name)
+    if not n:
+        return None
+    for k, data in templates.items():
+        display = k
+        if isinstance(data, dict):
+            display = str(data.get("carrier_name") or k)
+        if _norm(k) == n or _norm(display) == n:
+            return k
+        if n in _norm(k) or _norm(k) in n or n in _norm(display) or _norm(display) in n:
+            return k
+    best_k, best = None, 0.78
+    for k, data in templates.items():
+        display = k
+        if isinstance(data, dict):
+            display = str(data.get("carrier_name") or k)
+        for cand in (k, display):
+            ratio = SequenceMatcher(None, carrier_name.lower(), cand.lower()).ratio()
+            if ratio > best:
+                best, best_k = ratio, k
+    return best_k
+
+
+def resolve_carrier_entry(
+    templates: dict[str, Any],
+    carrier_name: str | None = None,
+    vendor_ref_id: str | None = None,
+) -> tuple[str | None, Any]:
+    """
+    Pick one carrier entry from PROMPT_TEMPLATES.
+
+    Match order (same as the invoice processor, then extras):
+    exact / _LLC / underscore key, vendor_ref_id in the prompt, then fuzzy name.
+    """
+    if not templates:
+        return None, None
+
+    key = resolve_classified_carrier_name(templates, carrier_name)
+    if not key:
+        key = _match_vendor_ref(templates, vendor_ref_id)
+    if not key and carrier_name:
+        key = _fuzzy_carrier_key(templates, carrier_name)
+    if not key:
+        return None, None
+    return key, templates.get(key)
+
+
+def get_prompt_template(
+    carrier_name: str | None,
+    templates: dict[str, Any],
+    vendor_ref_id: str | None = None,
+) -> tuple[str | None, str | None]:
+    """
+    Same contract as invoice_processor.get_prompt_template:
+
+        carrier_data = PROMPT_TEMPLATES.get(carrier_key)
+        return carrier_data.get("prompt_template")
+    """
+    matched, data = resolve_carrier_entry(templates, carrier_name, vendor_ref_id)
+    if not matched:
+        return None, None
+    prompt = ""
+    if isinstance(data, dict):
+        prompt = data.get("prompt_template") or ""
+    elif isinstance(data, str):
+        prompt = data
+    if not str(prompt).strip():
+        print(f"[PromptTemplate] Missing prompt_template for {matched!r}")
+        return None, matched
+    return str(prompt), matched
+
+
+def get_carrier_prompt_text(carrier_data: Any) -> str:
+    if isinstance(carrier_data, dict):
+        v = carrier_data.get("prompt_template")
+        if isinstance(v, str) and v.strip():
+            return v
+    return _template_prompt_text(carrier_data)
+
+
+def split_carrier_prompt(prompt_template: str, pdf_text: str) -> tuple[str, str]:
+    """
+    Same {pdf_text} split as invoice_processor.extract_information_with_claude:
+    static carrier instructions, then invoice text as the dynamic tail.
+    """
+    text = pdf_text or ""
+    if "{pdf_text}" in prompt_template:
+        static_body = prompt_template.replace(
+            "{pdf_text}", "the invoice text provided at the end of this message"
+        )
+    else:
+        static_body = prompt_template
+    return static_body, f"=== INVOICE TEXT ===\n{text}"
+
+
+def format_carrier_prompt(prompt_template: str, pdf_text: str) -> str:
+    """Combined prompt (static + invoice) for tests and callers that want one string."""
+    static_body, dynamic_tail = split_carrier_prompt(prompt_template, pdf_text)
+    return f"{static_body}{CACHE_SPLIT_MARKER}{dynamic_tail}"
+
+
+def normalize_s3_ref(bucket: str, key: str) -> tuple[str, str]:
+    """
+    Accept either split fields or a pasted s3:// URI. A trailing slash is a
+    prefix — we append prompt_template.py (the GE invoice template filename).
+    """
+    bucket = (bucket or "").strip()
+    key = (key or "").strip()
+    if bucket.startswith("s3://"):
+        rest = bucket[5:]
+        parsed_bucket, _, parsed_key = rest.partition("/")
+        bucket = parsed_bucket
+        if not key:
+            key = parsed_key
+    key = key.lstrip("/")
+    if key.endswith("/"):
+        key = f"{key}prompt_template.py"
+    return bucket, key
+
+
+def slot_from_project(project_config: dict) -> tuple[str, str]:
+    """Return (bucket, key) for the prompt-template file slot, or empty strings."""
+    for slot in project_config.get("file_slots") or []:
+        if not isinstance(slot, dict):
+            continue
+        if slot.get("id") != PROMPT_TEMPLATE_SLOT_ID:
+            continue
+        if not slot.get("enabled"):
+            return "", ""
+        return normalize_s3_ref(slot.get("s3_bucket") or "", slot.get("s3_key") or "")
+    return "", ""
+
+
+def get_carrier_prompt_for_project(
+    project_config: dict,
+    *,
+    carrier_name: str | None,
+    vendor_ref_id: str | None,
+) -> tuple[str | None, str | None]:
+    """
+    Load the client template from the project S3 slot and return
+    (prompt_text, matched_carrier_key). None if unset or unmatched.
+    """
+    bucket, key = slot_from_project(project_config)
+    if not bucket or not key:
+        return None, None
+    templates = load_templates(bucket, key)
+    if not templates:
+        print(f"[PromptTemplate] No PROMPT_TEMPLATES in s3://{bucket}/{key}")
+        return None, None
+    prompt, matched = get_prompt_template(
+        carrier_name, templates, vendor_ref_id=vendor_ref_id
+    )
+    if not matched:
+        print(
+            f"[PromptTemplate] No carrier match for name={carrier_name!r} "
+            f"vendor_ref_id={vendor_ref_id!r} ({len(templates)} keys)"
+        )
+        return None, None
+    if not prompt:
+        return None, matched
+    print(
+        f"[PromptTemplate] get_prompt_template({carrier_name!r}) → {matched!r} "
+        f"({len(prompt)} chars) from s3://{bucket}/{key}"
+    )
+    return prompt, matched
