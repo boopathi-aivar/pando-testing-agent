@@ -165,10 +165,15 @@ export async function getRetriggerJob(jobId) {
   return request(`/retrigger/jobs/${jobId}`)
 }
 
-export async function createRetriggerJob(projectId, invoiceNumbers, folderName) {
+export async function createRetriggerJob(projectId, invoiceNumbers, folderName, action = 'retrigger') {
   return request('/retrigger/jobs', {
     method: 'POST',
-    body: JSON.stringify({ project_id: projectId, invoice_numbers: invoiceNumbers, folder_name: folderName }),
+    body: JSON.stringify({
+      project_id: projectId,
+      invoice_numbers: invoiceNumbers,
+      folder_name: folderName,
+      action,
+    }),
   })
 }
 

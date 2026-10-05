@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Loader2, XCircle, Database, Trash2, Upload } from 'lucide-react'
+import { CheckCircle2, Circle, Loader2, XCircle, Database, Trash2, Upload, Search, FileText, Download, ScrollText } from 'lucide-react'
 
 const STEP_CONFIG = {
   fetch_pks: {
@@ -16,6 +16,54 @@ const STEP_CONFIG = {
     icon: Upload,
     description: 'Trigger S3 events via CopyObject',
   },
+  resolve_rows: {
+    label: 'Resolve Rows',
+    icon: Search,
+    description: 'Map invoice numbers to DynamoDB rows and attachments',
+  },
+  download_payloads: {
+    label: 'Download Payloads',
+    icon: FileText,
+    description: 'Fetch JSON payloads from S3',
+  },
+  download_pdfs: {
+    label: 'Download PDFs',
+    icon: Download,
+    description: 'Fetch PDF attachments from S3',
+  },
+  download_logs: {
+    label: 'Download Logs',
+    icon: ScrollText,
+    description: 'Pull CloudWatch logs for each invoice',
+  },
+  save_files: {
+    label: 'Save Files',
+    icon: Upload,
+    description: 'Write artifacts under the folder name',
+  },
+}
+
+const RETRIGGER_STEPS = ['fetch_pks', 'delete_records', 'reingest_files']
+const FETCH_STEPS_ORDER = [
+  'resolve_rows',
+  'download_payloads',
+  'download_pdfs',
+  'download_logs',
+  'save_files',
+]
+
+function resolveStepNames(steps) {
+  if (!steps || typeof steps !== 'object') return RETRIGGER_STEPS
+  const keys = Object.keys(steps)
+  if (keys.some((k) => FETCH_STEPS_ORDER.includes(k))) {
+    return FETCH_STEPS_ORDER.filter((k) => keys.includes(k))
+  }
+  if (keys.some((k) => RETRIGGER_STEPS.includes(k))) {
+    return RETRIGGER_STEPS.filter((k) => keys.includes(k)).length
+      ? RETRIGGER_STEPS.filter((k) => keys.includes(k))
+      : RETRIGGER_STEPS
+  }
+  return RETRIGGER_STEPS
 }
 
 function StepIcon({ status, icon: Icon }) {
@@ -42,19 +90,71 @@ function StepStatus({ status }) {
   return <span className={`text-xs ${cls}`}>{label}</span>
 }
 
+function StepMeta({ stepName, step }) {
+  if (step.status === 'pending') return null
+
+  return (
+    <div className="flex flex-wrap gap-3 text-xs">
+      {step.found !== undefined && (
+        <span className="text-text-secondary">
+          <span className="font-semibold">{step.found}</span> found
+        </span>
+      )}
+      {step.missing !== undefined && (
+        <span className="text-text-secondary">
+          <span className="font-semibold">{step.missing}</span> missing
+        </span>
+      )}
+      {step.deleted !== undefined && (
+        <span className="text-text-secondary">
+          <span className="font-semibold">{step.deleted}</span> deleted
+        </span>
+      )}
+      {step.triggered !== undefined && (
+        <span className="text-text-secondary">
+          <span className="font-semibold">{step.triggered}</span> triggered
+        </span>
+      )}
+      {step.downloaded !== undefined && (
+        <span className="text-text-secondary">
+          <span className="font-semibold">{step.downloaded}</span> downloaded
+        </span>
+      )}
+      {step.saved !== undefined && (
+        <span className="text-text-secondary">
+          <span className="font-semibold">{step.saved}</span> saved
+        </span>
+      )}
+      {step.failed !== undefined && step.failed > 0 && (
+        <span className="text-danger">
+          <span className="font-semibold">{step.failed}</span> failed
+        </span>
+      )}
+      {step.updated_at && (
+        <span className="text-text-muted ml-auto">
+          {new Date(step.updated_at).toLocaleTimeString()}
+        </span>
+      )}
+    </div>
+  )
+}
+
 export default function StepTracker({ steps }) {
-  const stepNames = ['fetch_pks', 'delete_records', 'reingest_files']
+  const stepNames = resolveStepNames(steps)
 
   return (
     <div className="space-y-4">
       {stepNames.map((stepName, idx) => {
         const step = steps?.[stepName] ?? { status: 'pending' }
-        const config = STEP_CONFIG[stepName]
+        const config = STEP_CONFIG[stepName] ?? {
+          label: stepName.replace(/_/g, ' '),
+          icon: Circle,
+          description: '',
+        }
         const isLast = idx === stepNames.length - 1
 
         return (
           <div key={stepName} className="relative">
-            {/* Connector Line */}
             {!isLast && (
               <div
                 className="absolute left-[10px] top-[28px] w-0.5 h-12 -mb-4"
@@ -69,7 +169,6 @@ export default function StepTracker({ steps }) {
               />
             )}
 
-            {/* Step Card */}
             <div
               className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${
                 step.status === 'running'
@@ -90,54 +189,12 @@ export default function StepTracker({ steps }) {
                   <h4 className="text-text-primary font-semibold text-sm">{config.label}</h4>
                   <StepStatus status={step.status} />
                 </div>
-                <p className="text-text-muted text-xs mb-2">{config.description}</p>
-
-                {/* Step Metadata */}
-                {step.status !== 'pending' && (
-                  <div className="flex flex-wrap gap-3 text-xs">
-                    {stepName === 'fetch_pks' && step.found !== undefined && (
-                      <>
-                        <span className="text-text-secondary">
-                          <span className="font-semibold">{step.found}</span> found
-                        </span>
-                        {step.missing !== undefined && (
-                          <span className="text-text-secondary">
-                            <span className="font-semibold">{step.missing}</span> missing
-                          </span>
-                        )}
-                      </>
-                    )}
-
-                    {stepName === 'delete_records' && step.deleted !== undefined && (
-                      <span className="text-text-secondary">
-                        <span className="font-semibold">{step.deleted}</span> deleted
-                      </span>
-                    )}
-
-                    {stepName === 'reingest_files' && (
-                      <>
-                        {step.triggered !== undefined && (
-                          <span className="text-text-secondary">
-                            <span className="font-semibold">{step.triggered}</span> triggered
-                          </span>
-                        )}
-                        {step.failed !== undefined && step.failed > 0 && (
-                          <span className="text-danger">
-                            <span className="font-semibold">{step.failed}</span> failed
-                          </span>
-                        )}
-                      </>
-                    )}
-
-                    {step.updated_at && (
-                      <span className="text-text-muted ml-auto">
-                        {new Date(step.updated_at).toLocaleTimeString()}
-                      </span>
-                    )}
-                  </div>
+                {config.description && (
+                  <p className="text-text-muted text-xs mb-2">{config.description}</p>
                 )}
 
-                {/* Error Message */}
+                <StepMeta stepName={stepName} step={step} />
+
                 {step.error && (
                   <div className="mt-2 p-2 rounded bg-danger-bg border border-danger/20">
                     <p className="text-danger text-xs font-mono">{step.error}</p>

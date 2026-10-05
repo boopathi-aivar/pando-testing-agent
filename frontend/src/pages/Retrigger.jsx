@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, Plus, Clock } from 'lucide-react'
+import { RefreshCw, Plus, Clock, FileJson, FileText, ScrollText } from 'lucide-react'
 import {
   getRetriggerProjects,
   getRetriggerJobs,
@@ -12,11 +12,41 @@ import {
 import RetriggerProjectModal from '../components/retrigger/RetriggerProjectModal'
 import StatusBadge from '../components/retrigger/StatusBadge'
 
+const BULK_ACTIONS = [
+  {
+    id: 'retrigger',
+    label: 'Retrigger bulk',
+    desc: 'Delete DynamoDB rows and re-ingest via S3',
+    icon: RefreshCw,
+  },
+  {
+    id: 'fetch_payload',
+    label: 'Fetch payload bulk',
+    desc: 'Download api_payload.json for each invoice',
+    icon: FileJson,
+  },
+  {
+    id: 'fetch_pdf',
+    label: 'Fetch PDF bulk',
+    desc: 'Download input invoice PDFs from S3',
+    icon: FileText,
+  },
+  {
+    id: 'fetch_logs',
+    label: 'Fetch logs bulk',
+    desc: 'Download Batch/Lambda CloudWatch logs',
+    icon: ScrollText,
+  },
+]
+
+const ACTION_LABELS = Object.fromEntries(BULK_ACTIONS.map((a) => [a.id, a.label]))
+
 export default function Retrigger() {
   const [projects, setProjects] = useState([])
   const [jobs, setJobs] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState('')
-  const [folderName, setFolderName] = useState('')  // NEW
+  const [action, setAction] = useState('retrigger')
+  const [folderName, setFolderName] = useState('')
   const [invoiceNumbers, setInvoiceNumbers] = useState('')
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -72,18 +102,28 @@ export default function Retrigger() {
       return
     }
 
+    const project = projects.find((p) => p.project_id === selectedProjectId)
+    if (action === 'fetch_logs' && !(project?.cloudwatch_log_group || '').trim()) {
+      setError('Selected project needs a CloudWatch log group (Batch or Lambda). Edit the project to add it.')
+      return
+    }
+
     setSubmitting(true)
     setError(null)
     setSuccess(null)
 
     try {
-      const job = await createRetriggerJob(selectedProjectId, invoices, folderName.trim())
-      setSuccess(`Job ${job.job_id} created successfully!`)
+      const job = await createRetriggerJob(
+        selectedProjectId,
+        invoices,
+        folderName.trim(),
+        action,
+      )
+      setSuccess(`Job ${job.job_id} created (${ACTION_LABELS[action] || action})`)
       setInvoiceNumbers('')
       setFolderName('')
       await loadData()
-      // Navigate to job detail after a brief delay
-      setTimeout(() => navigate(`/retrigger/jobs/${job.job_id}`), 1500)
+      setTimeout(() => navigate(`/retrigger/jobs/${job.job_id}`), 1200)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -92,34 +132,27 @@ export default function Retrigger() {
   }
 
   async function handleSaveProject(data) {
-    try {
-      if (editingProject) {
-        await updateRetriggerProject(editingProject.project_id, data)
-      } else {
-        await createRetriggerProject(data)
-      }
-      setShowProjectModal(false)
-      setEditingProject(null)
-      await loadData()
-    } catch (err) {
-      throw err
+    if (editingProject) {
+      await updateRetriggerProject(editingProject.project_id, data)
+    } else {
+      await createRetriggerProject(data)
     }
+    await loadData()
   }
 
   async function handleDeleteProject(projectId) {
-    if (!confirm('Are you sure you want to delete this project?')) return
+    if (!confirm('Delete this project?')) return
     try {
       await deleteRetriggerProject(projectId)
+      if (selectedProjectId === projectId) setSelectedProjectId('')
       await loadData()
-      if (selectedProjectId === projectId) {
-        setSelectedProjectId(projects.length > 1 ? projects[0].project_id : '')
-      }
     } catch (err) {
       setError(err.message)
     }
   }
 
   const recentJobs = jobs.slice(0, 10)
+  const selectedAction = BULK_ACTIONS.find((a) => a.id === action) || BULK_ACTIONS[0]
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -129,8 +162,10 @@ export default function Retrigger() {
             <RefreshCw size={20} style={{ color: '#6C5CE7' }} />
           </div>
           <div>
-            <h2 className="text-text-primary font-bold text-lg">Retrigger (Re-ingestion)</h2>
-            <p className="text-text-muted text-sm">Re-process invoices by triggering S3 events</p>
+            <h2 className="text-text-primary font-bold text-lg">Bulk Ops</h2>
+            <p className="text-text-muted text-sm">
+              Retrigger, or bulk-fetch payloads, PDFs, and CloudWatch logs by invoice list
+            </p>
           </div>
         </div>
       </div>
@@ -156,19 +191,17 @@ export default function Retrigger() {
         </div>
       ) : (
         <>
-          {/* Main Form */}
           <div className="bg-surface border border-border rounded-2xl p-6 shadow-card mb-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-text-primary font-semibold text-base">Start Re-ingestion</h3>
+              <h3 className="text-text-primary font-semibold text-base">Start bulk job</h3>
               <button
+                type="button"
                 onClick={() => {
                   setEditingProject(null)
                   setShowProjectModal(true)
                 }}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
                 style={{ background: '#EEF2FF', color: '#6C5CE7' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#E0DEFF' }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = '#EEF2FF' }}
               >
                 <Plus size={14} />
                 New Project
@@ -176,10 +209,36 @@ export default function Retrigger() {
             </div>
 
             <form onSubmit={handleSubmit}>
+              <div className="mb-5">
+                <label className="block text-text-secondary text-sm font-medium mb-2">Action</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {BULK_ACTIONS.map((opt) => {
+                    const Icon = opt.icon
+                    const selected = action === opt.id
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setAction(opt.id)}
+                        className="text-left p-3 rounded-xl border transition-all"
+                        style={{
+                          borderColor: selected ? '#6C5CE7' : undefined,
+                          background: selected ? '#EEF2FF' : undefined,
+                        }}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Icon size={16} style={{ color: selected ? '#6C5CE7' : '#8B8B99' }} />
+                          <span className="text-sm font-semibold text-text-primary">{opt.label}</span>
+                        </div>
+                        <p className="text-xs text-text-muted pl-6">{opt.desc}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               <div className="mb-4">
-                <label className="block text-text-secondary text-sm font-medium mb-2">
-                  Project
-                </label>
+                <label className="block text-text-secondary text-sm font-medium mb-2">Project</label>
                 <div className="flex gap-2">
                   <select
                     value={selectedProjectId}
@@ -205,8 +264,6 @@ export default function Retrigger() {
                         }}
                         className="px-3 py-2 text-sm font-medium rounded-xl transition-colors"
                         style={{ background: '#F5F5F7', color: '#8B8B99' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#EBEBEF' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#F5F5F7' }}
                       >
                         Edit
                       </button>
@@ -215,8 +272,6 @@ export default function Retrigger() {
                         onClick={() => handleDeleteProject(selectedProjectId)}
                         className="px-3 py-2 text-sm font-medium rounded-xl transition-colors"
                         style={{ background: '#FEE', color: '#E53E3E' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#FDD' }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#FEE' }}
                       >
                         Delete
                       </button>
@@ -226,19 +281,17 @@ export default function Retrigger() {
               </div>
 
               <div className="mb-4">
-                <label className="block text-text-secondary text-sm font-medium mb-2">
-                  Folder Name *
-                </label>
+                <label className="block text-text-secondary text-sm font-medium mb-2">Folder Name *</label>
                 <input
                   type="text"
                   value={folderName}
                   onChange={(e) => setFolderName(e.target.value)}
-                  placeholder="e.g., Averitt_Batch1, RXO_Week42, MAX_January"
+                  placeholder="e.g., Averitt_Batch1, RXO_Week42"
                   className="w-full text-sm"
                   required
                 />
                 <p className="text-text-muted text-xs mt-2">
-                  Used to organize and search this batch of invoices
+                  Results are saved under this folder name (same idea as Retrigger batches)
                 </p>
               </div>
 
@@ -249,15 +302,12 @@ export default function Retrigger() {
                 <textarea
                   value={invoiceNumbers}
                   onChange={(e) => setInvoiceNumbers(e.target.value)}
-                  placeholder="INV-001&#10;INV-002&#10;INV-003"
+                  placeholder={'INV-001\nINV-002\nINV-003'}
                   rows={8}
                   className="w-full text-sm font-mono"
                   required
                 />
-                <p className="text-text-muted text-xs mt-2">
-                  Enter invoice numbers to re-process. Each invoice will be deleted from DynamoDB and
-                  re-ingested via S3 event.
-                </p>
+                <p className="text-text-muted text-xs mt-2">{selectedAction.desc}</p>
               </div>
 
               <button
@@ -265,15 +315,12 @@ export default function Retrigger() {
                 disabled={submitting || !selectedProjectId}
                 className="px-6 py-2.5 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: '#6C5CE7' }}
-                onMouseEnter={(e) => !submitting && (e.currentTarget.style.background = '#5A4BD1')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = '#6C5CE7')}
               >
-                {submitting ? 'Starting...' : 'Start Re-ingestion'}
+                {submitting ? 'Starting...' : `Start ${selectedAction.label}`}
               </button>
             </form>
           </div>
 
-          {/* Recent Jobs */}
           <div className="bg-surface border border-border rounded-2xl p-6 shadow-card">
             <div className="flex items-center gap-2 mb-4">
               <Clock size={18} className="text-text-muted" />
@@ -296,7 +343,8 @@ export default function Retrigger() {
                         <StatusBadge status={job.status} size="sm" />
                       </div>
                       <p className="text-text-muted text-xs">
-                        {job.project_name} • {job.folder_name} • {job.invoice_numbers?.length || 0} invoice(s)
+                        {ACTION_LABELS[job.action] || job.action || 'Retrigger bulk'} • {job.project_name} •{' '}
+                        {job.folder_name} • {job.invoice_numbers?.length || 0} invoice(s)
                       </p>
                     </div>
                     <div className="text-text-muted text-xs text-right ml-4">

@@ -131,13 +131,27 @@ def processor_handler(event: dict, context) -> dict:
             from services.retrigger_pipeline import run_fetch_records
             run_fetch_records(job_id, event["invoice_numbers"], event["cfg"])
 
+        elif mode == "bulk_fetch":
+            from services.bulk_fetch_pipeline import run_bulk_fetch_pipeline
+            run_bulk_fetch_pipeline(
+                job_id,
+                event["invoice_numbers"],
+                event["cfg"],
+                event.get("action") or "fetch_payload",
+            )
+
         else:
             print(f"[ProcessorHandler] Unknown mode: {mode}")
 
     except Exception as exc:
         print(f"[ProcessorHandler] Job {job_id} failed: {exc}")
-        # Don't update retrigger jobs here — they handle their own state
-        if mode not in ("retrigger", "retrigger_resume", "retrigger_fetch_records"):
+        # Don't update retrigger/bulk jobs here — they handle their own state
+        if mode not in (
+            "retrigger",
+            "retrigger_resume",
+            "retrigger_fetch_records",
+            "bulk_fetch",
+        ):
             update_job(job_id, {
                 "status":       "failed",
                 "error":        str(exc),

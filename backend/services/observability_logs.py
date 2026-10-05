@@ -576,18 +576,19 @@ def build_cloudwatch_url(
     created_at: str | int | float | None = None,
     completed_at: str | int | float | None = None,
     log_stream_name: str | None = None,
+    log_group_name: str | None = None,
     region: str | None = None,
     pad_before_minutes: int = 30,
     pad_after_hours: int = 3,
 ) -> str | None:
     """
-    AWS Console deep-link to the project's invoice Lambda logs.
+    AWS Console deep-link to the project's invoice Lambda/Batch logs.
 
     Prefer a specific log stream (the [$LATEST] stream you open after
     clicking a stream name). Falls back to filtered All-events search.
     """
     project = get_project(project_id)
-    log_group = (project.cloudwatch_log_group if project else "") or ""
+    log_group = (log_group_name or (project.cloudwatch_log_group if project else "") or "").strip()
     if not log_group:
         return None
 
@@ -649,12 +650,13 @@ def find_cloudwatch_log_stream(
     completed_at: str | int | float | None = None,
 ) -> str | None:
     """
-    Look up the Lambda log stream that contains this invoice's events
-    (e.g. 2026/09/28/[$LATEST]8cb7df59...).
+    Look up the Lambda/Batch log stream that contains this invoice's events
+    (e.g. 2026/09/28/[$LATEST]8cb7df59... or jj-invoice-definition/default/...).
     """
-    project = get_project(project_id)
-    log_group = (project.cloudwatch_log_group if project else "") or ""
-    if not log_group:
+    from observability.registry import log_groups_for_project
+
+    groups = log_groups_for_project(project_id)
+    if not groups:
         return None
 
     filter_term = (attachment_id or email_id or invoice_number or "").strip()
@@ -668,40 +670,83 @@ def find_cloudwatch_log_stream(
         pad_after_hours=3,
     )
     if start_ms is None or end_ms is None:
-        # Broad fallback if timestamps missing
         end_ms = int(datetime.now(tz=timezone.utc).timestamp() * 1000)
         start_ms = end_ms - 7 * 24 * 3600 * 1000
 
     try:
         client = make_source_aws_session().client("logs", region_name="us-east-1")
-        resp = client.filter_log_events(
-            logGroupName=log_group,
-            startTime=start_ms,
-            endTime=end_ms,
-            filterPattern=f'"{filter_term}"',
-            limit=10,
-            interleaved=True,
-        )
-        events = resp.get("events") or []
-        if not events:
-            return None
-        # Prefer the stream that has the most matching events in this page
-        counts: dict[str, int] = {}
-        for ev in events:
-            name = ev.get("logStreamName") or ""
-            if name:
-                counts[name] = counts.get(name, 0) + 1
-        if not counts:
-            return None
-        return max(counts.items(), key=lambda kv: kv[1])[0]
     except Exception as exc:
-        log.warning(
-            "CloudWatch stream lookup failed project=%s filter=%s: %s",
-            project_id,
-            filter_term,
-            exc,
-        )
+        log.warning("CloudWatch client unavailable: %s", exc)
         return None
+
+    terms = [t for t in (attachment_id, email_id, invoice_number) if (t or "").strip()]
+    # de-dupe preserving order
+    seen_terms = set()
+    ordered_terms = []
+    for t in terms:
+        t = t.strip()
+        if t not in seen_terms:
+            seen_terms.add(t)
+            ordered_terms.append(t)
+
+    for log_group in groups:
+        for term in ordered_terms:
+            try:
+                resp = client.filter_log_events(
+                    logGroupName=log_group,
+                    startTime=start_ms,
+                    endTime=end_ms,
+                    filterPattern=f'"{term}"',
+                    limit=10,
+                    interleaved=True,
+                )
+            except Exception as exc:
+                log.warning(
+                    "CloudWatch stream lookup failed project=%s group=%s filter=%s: %s",
+                    project_id,
+                    log_group,
+                    term,
+                    exc,
+                )
+                continue
+            events = resp.get("events") or []
+            if not events:
+                continue
+            counts: dict[str, int] = {}
+            for ev in events:
+                name = ev.get("logStreamName") or ""
+                if name:
+                    counts[name] = counts.get(name, 0) + 1
+            if counts:
+                # Stash winning group on a thread-local-ish attribute via return
+                # Caller that needs group should use find_cloudwatch_log_stream_detail.
+                stream = max(counts.items(), key=lambda kv: kv[1])[0]
+                find_cloudwatch_log_stream.last_log_group = log_group  # type: ignore[attr-defined]
+                return stream
+    return None
+
+
+def find_cloudwatch_log_stream_detail(
+    project_id: str,
+    *,
+    attachment_id: str = "",
+    email_id: str = "",
+    invoice_number: str = "",
+    created_at: str | int | float | None = None,
+    completed_at: str | int | float | None = None,
+) -> tuple[str | None, str | None]:
+    """Return (log_group, stream_name) using the same search as find_cloudwatch_log_stream."""
+    find_cloudwatch_log_stream.last_log_group = None  # type: ignore[attr-defined]
+    stream = find_cloudwatch_log_stream(
+        project_id,
+        attachment_id=attachment_id,
+        email_id=email_id,
+        invoice_number=invoice_number,
+        created_at=created_at,
+        completed_at=completed_at,
+    )
+    group = getattr(find_cloudwatch_log_stream, "last_log_group", None)
+    return group, stream
 
 
 def resolve_cloudwatch_link(
@@ -715,7 +760,7 @@ def resolve_cloudwatch_link(
     if not detail:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
-    stream = find_cloudwatch_log_stream(
+    group, stream = find_cloudwatch_log_stream_detail(
         project_id,
         attachment_id=detail.get("attachment_id") or attachment_id,
         email_id=detail.get("email_id") or email_id,
@@ -732,6 +777,7 @@ def resolve_cloudwatch_link(
         created_at=detail.get("created_at_iso") or detail.get("created_at"),
         completed_at=detail.get("completed_at_iso") or detail.get("updated_at_iso"),
         log_stream_name=stream,
+        log_group_name=group,
     )
     if not url:
         raise HTTPException(
@@ -742,7 +788,7 @@ def resolve_cloudwatch_link(
     project = get_project(project_id)
     return {
         "url": url,
-        "log_group": (project.cloudwatch_log_group if project else "") or "",
+        "log_group": group or ((project.cloudwatch_log_group if project else "") or ""),
         "log_stream": stream,
         "account_id": CLOUDWATCH_CONSOLE_ACCOUNT_ID,
     }

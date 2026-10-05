@@ -30,7 +30,9 @@ class ObservabilityProject:
 _DEFAULT_LOG_GROUPS: dict[str, str] = {
     "delicato": "/aws/lambda/pando-delicato-orchestrator",
     "ge": "/aws/lambda/pando-general-electronics-invoice-processor-temp",
-    "jnj": "/aws/lambda/pando-JJ-invoice-processing",
+    # JnJ Batch processors log under the shared /aws/batch/job group
+    # (streams like jj-invoice-definition/default/...).
+    "jnj": "/aws/batch/job",
     "otter": "/aws/lambda/pando-otter-invoice-processor",
     "ghent": "/aws/lambda/pando-ghent-invoice_processing_temp",
     "west-marine": "/aws/lambda/pando-west-marine-orchestrator",
@@ -38,6 +40,14 @@ _DEFAULT_LOG_GROUPS: dict[str, str] = {
     "unilever": "/aws/lambda/Pando-Unilever-Invoice",
     "unilever-excel": "/aws/lambda/pando-unilever-excel-processor",
     "meta": "/aws/lambda/pando-meta-invoice",
+}
+
+# Secondary groups to search when the primary has no matching events.
+_FALLBACK_LOG_GROUPS: dict[str, list[str]] = {
+    "jnj": [
+        "/aws/lambda/jj-BatchTriggerLambda",
+        "/aws/lambda/pando-JJ-invoice-processing",
+    ],
 }
 
 # Account where invoice Lambda CloudWatch log groups actually exist.
@@ -113,6 +123,18 @@ OBSERVABILITY_PROJECTS = _build_projects()
 
 def get_project(project_id: str) -> ObservabilityProject | None:
     return OBSERVABILITY_PROJECTS.get(project_id)
+
+
+def log_groups_for_project(project_id: str) -> list[str]:
+    """Primary + fallback CloudWatch log groups for a project (deduped)."""
+    project = get_project(project_id)
+    groups: list[str] = []
+    if project and project.cloudwatch_log_group:
+        groups.append(project.cloudwatch_log_group)
+    for g in _FALLBACK_LOG_GROUPS.get(project_id, []):
+        if g and g not in groups:
+            groups.append(g)
+    return groups
 
 
 def list_projects() -> list[dict]:
