@@ -1,23 +1,21 @@
 """
-Pydantic models for the Retrigger (re-ingestion) feature.
+Pydantic models for the Bulk Ops feature (formerly Retrigger-only).
 
-A RetriggerProject names the S3 bucket + DynamoDB table pair that a
-customer's invoice-processing pipeline uses. It does NOT store AWS
-credentials — cross-account access reuses the same Secrets Manager-backed
-session already configured for S3/CloudWatch access (see config.py's
-make_source_aws_session()).
+A project names the S3 bucket + DynamoDB table pair that a customer's
+invoice-processing pipeline uses. Optional fields support bulk fetch
+actions (payload / PDF / CloudWatch-or-Batch logs).
 
-A RetriggerJob tracks one re-ingestion pipeline run for a batch of invoice
-numbers against a given project.
+Credentials are NOT stored — cross-account access reuses Secrets Manager
+sessions (see config.make_source_aws_session()).
 """
 
-from datetime import datetime, timezone
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
 
-# ── Retrigger Project ─────────────────────────────────────────────────────────
+BULK_ACTIONS = ("retrigger", "fetch_payload", "fetch_pdf", "fetch_logs")
+
 
 class RetriggerProjectCreate(BaseModel):
     project_name: str
@@ -26,6 +24,10 @@ class RetriggerProjectCreate(BaseModel):
     aws_region: str = "us-east-1"
     batch_size: int = 10
     batch_sleep_secs: int = 45
+    destination_bucket: str = ""
+    cloudwatch_log_group: str = ""
+    payload_filename: str = "api_payload.json"
+    log_lookback_seconds: int = 604800
 
 
 class RetriggerProjectUpdate(BaseModel):
@@ -35,6 +37,10 @@ class RetriggerProjectUpdate(BaseModel):
     aws_region: Optional[str] = None
     batch_size: Optional[int] = None
     batch_sleep_secs: Optional[int] = None
+    destination_bucket: Optional[str] = None
+    cloudwatch_log_group: Optional[str] = None
+    payload_filename: Optional[str] = None
+    log_lookback_seconds: Optional[int] = None
 
 
 class RetriggerProject(BaseModel):
@@ -45,16 +51,19 @@ class RetriggerProject(BaseModel):
     aws_region: str = "us-east-1"
     batch_size: int = 10
     batch_sleep_secs: int = 45
+    destination_bucket: str = ""
+    cloudwatch_log_group: str = ""
+    payload_filename: str = "api_payload.json"
+    log_lookback_seconds: int = 604800
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
 
-# ── Retrigger Job ──────────────────────────────────────────────────────────────
-
 class RetriggerJobCreate(BaseModel):
     project_id: str
     invoice_numbers: list[str]
-    folder_name: str  # NEW: folder name for organizing PK records
+    folder_name: str
+    action: str = "retrigger"
 
 
 STEP_NAMES = ["fetch_pks", "delete_records", "reingest_files"]
@@ -74,19 +83,18 @@ class RetriggerJob(BaseModel):
     job_id: str
     project_id: str
     project_name: str
-    folder_name: str  # NEW: folder name for organizing this batch
+    folder_name: str
+    action: str = "retrigger"
     invoice_numbers: list[str]
-    status: str = "pending"  # pending | running | paused | completed | failed
+    status: str = "pending"
     steps: dict[str, Any] = Field(default_factory=default_steps)
     logs: list[dict[str, Any]] = Field(default_factory=list)
-    created_at: str = Field(default_factory=lambda: datetime.now(tz=timezone.utc).isoformat())
-    updated_at: str = Field(default_factory=lambda: datetime.now(tz=timezone.utc).isoformat())
+    pk_records: list[dict[str, Any]] = Field(default_factory=list)
+    artifacts: list[dict[str, Any]] = Field(default_factory=list)
+    progress: dict[str, Any] = Field(default_factory=dict)
+    paused_at_step: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
     error: Optional[str] = None
     summary: Optional[dict[str, Any]] = None
-    records: Optional[list[dict[str, Any]]] = None  # populated by fetch_records step
-    # NEW: Store PK records within the job
-    pk_records: list[dict[str, Any]] = Field(default_factory=list)
-    # Format: [{"invoice_number": "xxx", "pk": "EMAIL#xxx", "message_id": "xxx", "sk": "METADATA", "status": "pending"}]
-    # NEW: Pause/Resume support
-    paused_at_step: Optional[str] = None
-    progress: Optional[dict[str, Any]] = None  # {completed_pks: [...], completed_message_ids: [...]}
+    output_dir: Optional[str] = None

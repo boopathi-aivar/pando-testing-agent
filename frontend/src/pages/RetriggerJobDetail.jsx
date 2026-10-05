@@ -101,7 +101,7 @@ export default function RetriggerJobDetail() {
             onClick={() => navigate('/retrigger')}
             className="text-danger text-sm underline hover:no-underline font-medium"
           >
-            Back to Retrigger
+            Back to Bulk Ops
           </button>
         </div>
       </div>
@@ -117,7 +117,7 @@ export default function RetriggerJobDetail() {
             onClick={() => navigate('/retrigger')}
             className="mt-4 text-sm text-aivar-purple-500 underline hover:no-underline"
           >
-            Back to Retrigger
+            Back to Bulk Ops
           </button>
         </div>
       </div>
@@ -136,17 +136,17 @@ export default function RetriggerJobDetail() {
           className="flex items-center gap-2 text-text-muted hover:text-text-primary text-sm font-medium mb-4 transition-colors"
         >
           <ArrowLeft size={16} />
-          Back to Retrigger
+          Back to Bulk Ops
         </button>
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-text-primary font-bold text-lg mb-1">{job.job_id}</h2>
             <p className="text-text-muted text-sm">
-              {job.project_name} • Folder: {job.folder_name} • {job.invoice_numbers?.length || 0} invoice(s)
+              {(job.action || 'retrigger').replaceAll('_', ' ')} • {job.project_name} • Folder: {job.folder_name} • {job.invoice_numbers?.length || 0} invoice(s)
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {job.status === 'running' && (
+            {job.status === 'running' && (job.action || 'retrigger') === 'retrigger' && (
               <button
                 onClick={handlePause}
                 disabled={pausingJob}
@@ -159,7 +159,7 @@ export default function RetriggerJobDetail() {
                 {pausingJob ? 'Pausing...' : 'Pause'}
               </button>
             )}
-            {job.status === 'paused' && (
+            {job.status === 'paused' && (job.action || 'retrigger') === 'retrigger' && (
               <button
                 onClick={handleResume}
                 disabled={resumingJob}
@@ -303,6 +303,62 @@ export default function RetriggerJobDetail() {
               </p>
             </div>
           )}
+        </div>
+      )}
+
+
+      {/* Fetch artifacts */}
+      {Array.isArray(job.artifacts) && job.artifacts.length > 0 && (
+        <div className="bg-surface border border-border rounded-2xl p-6 shadow-card mb-6">
+          <h3 className="text-text-primary font-semibold text-base mb-4">Saved files</h3>
+          <p className="text-text-muted text-xs mb-3">
+            Folder: {job.folder_name}{job.output_dir ? ` • ${job.output_dir}` : ''}
+          </p>
+          <div className="space-y-2">
+            {job.artifacts.map((art, idx) => (
+              <div
+                key={`${art.invoice || 'inv'}-${idx}`}
+                className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-text-primary truncate">
+                    {art.invoice}{art.filename ? ` • ${art.filename}` : ''}
+                  </p>
+                  <p className="text-xs text-text-muted truncate">
+                    {art.status}
+                    {art.error ? ` — ${art.error}` : ''}
+                    {art.s3_uri ? ` — ${art.s3_uri}` : ''}
+                  </p>
+                </div>
+                {art.status === 'OK' && art.filename && (
+                  <button
+                    type="button"
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                    style={{ background: '#EEF2FF', color: '#6C5CE7' }}
+                    onClick={() => {
+                      const token = localStorage.getItem('pando_token')
+                      fetch(`/api/retrigger/jobs/${encodeURIComponent(job.job_id)}/artifacts/${encodeURIComponent(art.filename)}`, {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {},
+                      })
+                        .then(async (res) => {
+                          if (!res.ok) throw new Error(`Download failed (${res.status})`)
+                          const blob = await res.blob()
+                          const url = URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = art.filename
+                          a.click()
+                          URL.revokeObjectURL(url)
+                        })
+                        .catch((err) => alert(err.message))
+                    }}
+                  >
+                    Download
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

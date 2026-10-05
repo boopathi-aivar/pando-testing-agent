@@ -8,7 +8,7 @@ const navItems = [
   { to: '/projects', icon: FolderOpen, label: 'Projects' },
   { to: '/observability', icon: Activity, label: 'Observability' },
   { to: '/prompt-generator', icon: Sparkles, label: 'Prompt Generator' },
-  { to: '/retrigger', icon: RefreshCw, label: 'Retrigger' },
+  { to: '/retrigger', icon: RefreshCw, label: 'Bulk Ops' },
   { to: '/documentation', icon: BookOpen, label: 'Documentation' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]

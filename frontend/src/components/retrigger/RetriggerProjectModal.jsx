@@ -9,6 +9,10 @@ export default function RetriggerProjectModal({ project, onClose, onSave }) {
     aws_region: 'us-east-1',
     batch_size: 10,
     batch_sleep_secs: 45,
+    destination_bucket: '',
+    cloudwatch_log_group: '',
+    payload_filename: 'api_payload.json',
+    log_lookback_seconds: 604800,
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -22,6 +26,10 @@ export default function RetriggerProjectModal({ project, onClose, onSave }) {
         aws_region: project.aws_region || 'us-east-1',
         batch_size: project.batch_size || 10,
         batch_sleep_secs: project.batch_sleep_secs || 45,
+        destination_bucket: project.destination_bucket || '',
+        cloudwatch_log_group: project.cloudwatch_log_group || '',
+        payload_filename: project.payload_filename || 'api_payload.json',
+        log_lookback_seconds: project.log_lookback_seconds || 604800,
       })
     }
   }, [project])
@@ -52,10 +60,10 @@ export default function RetriggerProjectModal({ project, onClose, onSave }) {
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div>
             <h3 className="text-text-primary font-bold text-lg">
-              {project ? 'Edit Project' : 'New Retrigger Project'}
+              {project ? 'Edit Bulk Ops Project' : 'New Bulk Ops Project'}
             </h3>
             <p className="text-text-muted text-sm mt-1">
-              Configure S3 bucket and DynamoDB table for re-ingestion
+              Configure S3, DynamoDB, and optional fetch settings (payload / PDF / logs)
             </p>
           </div>
           <button
@@ -147,6 +155,52 @@ export default function RetriggerProjectModal({ project, onClose, onSave }) {
                 <option value="eu-central-1">Europe (Frankfurt) - eu-central-1</option>
                 <option value="eu-west-1">Europe (Ireland) - eu-west-1</option>
               </select>
+            </div>
+
+
+            <div>
+              <label className="block text-text-secondary text-sm font-medium mb-2">
+                Destination Bucket (fetch PDF / payload)
+              </label>
+              <input
+                type="text"
+                value={formData.destination_bucket}
+                onChange={(e) => handleChange('destination_bucket', e.target.value)}
+                placeholder="e.g., nam-pando-prod-delicato-bucket"
+                className="w-full text-sm font-mono"
+              />
+              <p className="text-text-muted text-xs mt-1">
+                Optional. Overrides bucket in s3_path / output_path when downloading.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-text-secondary text-sm font-medium mb-2">
+                CloudWatch Log Group (Batch or Lambda)
+              </label>
+              <input
+                type="text"
+                value={formData.cloudwatch_log_group}
+                onChange={(e) => handleChange('cloudwatch_log_group', e.target.value)}
+                placeholder="e.g., /aws/batch/... or /aws/lambda/..."
+                className="w-full text-sm font-mono"
+              />
+              <p className="text-text-muted text-xs mt-1">
+                Required for Fetch logs. Prefer Batch group when it exists.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-text-secondary text-sm font-medium mb-2">
+                Payload filename
+              </label>
+              <input
+                type="text"
+                value={formData.payload_filename}
+                onChange={(e) => handleChange('payload_filename', e.target.value)}
+                placeholder="api_payload.json"
+                className="w-full text-sm font-mono"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
