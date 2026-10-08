@@ -249,20 +249,14 @@ export default function RetriggerProjectModal({ project, onClose, onSave }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium rounded-xl transition-colors"
-              style={{ background: '#F5F5F7', color: '#8B8B99' }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#EBEBEF' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#F5F5F7' }}
+              className="px-4 py-2 text-sm font-medium rounded-xl transition-colors bg-background border border-border text-text-secondary hover:bg-surface hover:text-text-primary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: '#6C5CE7' }}
-              onMouseEnter={(e) => !saving && (e.currentTarget.style.background = '#5A4BD1')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = '#6C5CE7')}
+              className="px-6 py-2 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed bg-[#6C5CE7] hover:bg-[#5A4BD1]"
             >
               {saving ? 'Saving...' : project ? 'Update Project' : 'Create Project'}
             </button>

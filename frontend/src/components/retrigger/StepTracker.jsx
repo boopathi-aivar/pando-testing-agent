@@ -157,15 +157,13 @@ export default function StepTracker({ steps }) {
           <div key={stepName} className="relative">
             {!isLast && (
               <div
-                className="absolute left-[10px] top-[28px] w-0.5 h-12 -mb-4"
-                style={{
-                  background:
-                    step.status === 'completed'
-                      ? '#10B981'
-                      : step.status === 'failed'
-                      ? '#E53E3E'
-                      : '#E0E0E5',
-                }}
+                className={`absolute left-[10px] top-[28px] w-0.5 h-12 -mb-4 ${
+                  step.status === 'completed'
+                    ? 'bg-success'
+                    : step.status === 'failed'
+                    ? 'bg-danger'
+                    : 'bg-border'
+                }`}
               />
             )}
 
