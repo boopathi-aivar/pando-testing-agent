@@ -259,6 +259,11 @@ input::placeholder, textarea::placeholder {
   color: var(--color-text-muted);
 }
 
+option {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;

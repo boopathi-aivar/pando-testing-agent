@@ -158,8 +158,8 @@ export default function Retrigger() {
     <div className="max-w-6xl mx-auto">
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#EEF2FF' }}>
-            <RefreshCw size={20} style={{ color: '#6C5CE7' }} />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-aivar-purple-50">
+            <RefreshCw size={20} className="text-[#6C5CE7]" />
           </div>
           <div>
             <h2 className="text-text-primary font-bold text-lg">Bulk Ops</h2>
@@ -200,8 +200,7 @@ export default function Retrigger() {
                   setEditingProject(null)
                   setShowProjectModal(true)
                 }}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
-                style={{ background: '#EEF2FF', color: '#6C5CE7' }}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors bg-aivar-purple-50 text-[#6C5CE7] hover:bg-aivar-purple-100"
               >
                 <Plus size={14} />
                 New Project
@@ -220,14 +219,14 @@ export default function Retrigger() {
                         key={opt.id}
                         type="button"
                         onClick={() => setAction(opt.id)}
-                        className="text-left p-3 rounded-xl border transition-all"
-                        style={{
-                          borderColor: selected ? '#6C5CE7' : undefined,
-                          background: selected ? '#EEF2FF' : undefined,
-                        }}
+                        className={`text-left p-3 rounded-xl border transition-all ${
+                          selected
+                            ? 'border-[#6C5CE7] bg-aivar-purple-50'
+                            : 'border-border bg-background hover:bg-aivar-purple-50/40'
+                        }`}
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <Icon size={16} style={{ color: selected ? '#6C5CE7' : '#8B8B99' }} />
+                          <Icon size={16} className={selected ? 'text-[#6C5CE7]' : 'text-text-muted'} />
                           <span className="text-sm font-semibold text-text-primary">{opt.label}</span>
                         </div>
                         <p className="text-xs text-text-muted pl-6">{opt.desc}</p>
@@ -262,16 +261,14 @@ export default function Retrigger() {
                           setEditingProject(proj)
                           setShowProjectModal(true)
                         }}
-                        className="px-3 py-2 text-sm font-medium rounded-xl transition-colors"
-                        style={{ background: '#F5F5F7', color: '#8B8B99' }}
+                        className="px-3 py-2 text-sm font-medium rounded-xl transition-colors bg-background border border-border text-text-secondary hover:bg-surface hover:text-text-primary"
                       >
                         Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteProject(selectedProjectId)}
-                        className="px-3 py-2 text-sm font-medium rounded-xl transition-colors"
-                        style={{ background: '#FEE', color: '#E53E3E' }}
+                        className="px-3 py-2 text-sm font-medium rounded-xl transition-colors bg-danger-bg text-danger hover:opacity-90"
                       >
                         Delete
                       </button>
@@ -313,8 +310,7 @@ export default function Retrigger() {
               <button
                 type="submit"
                 disabled={submitting || !selectedProjectId}
-                className="px-6 py-2.5 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: '#6C5CE7' }}
+                className="px-6 py-2.5 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed bg-[#6C5CE7] hover:bg-[#5A4BD1]"
               >
                 {submitting ? 'Starting...' : `Start ${selectedAction.label}`}
               </button>
@@ -335,7 +331,7 @@ export default function Retrigger() {
                   <div
                     key={job.job_id}
                     onClick={() => navigate(`/retrigger/jobs/${job.job_id}`)}
-                    className="flex items-center justify-between p-4 rounded-xl border border-border hover:border-aivar-purple-200 hover:bg-aivar-purple-50/30 transition-all cursor-pointer"
+                    className="flex items-center justify-between p-4 rounded-xl border border-border bg-background hover:border-aivar-purple-200 hover:bg-aivar-purple-50/50 transition-all cursor-pointer"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1">

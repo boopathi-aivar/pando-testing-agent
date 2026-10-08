@@ -265,10 +265,7 @@ export default function RetriggerJobDetail() {
               {hasRecords && (
                 <button
                   onClick={() => setShowRecords(!showRecords)}
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-xl transition-colors"
-                  style={{ background: '#F5F5F7', color: '#8B8B99' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#EBEBEF' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#F5F5F7' }}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-xl transition-colors bg-background border border-border text-text-secondary hover:bg-surface hover:text-text-primary"
                 >
                   {showRecords ? <EyeOff size={14} /> : <Eye size={14} />}
                   {showRecords ? 'Hide' : 'Show'} JSON
@@ -277,10 +274,7 @@ export default function RetriggerJobDetail() {
               <button
                 onClick={handleFetchRecords}
                 disabled={fetchingRecords}
-                className="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-50"
-                style={{ background: '#6C5CE7' }}
-                onMouseEnter={(e) => !fetchingRecords && (e.currentTarget.style.background = '#5A4BD1')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = '#6C5CE7')}
+                className="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-50 bg-[#6C5CE7] hover:bg-[#5A4BD1]"
               >
                 <Download size={14} />
                 {fetchingRecords ? 'Fetching...' : 'Fetch Records'}
@@ -318,7 +312,7 @@ export default function RetriggerJobDetail() {
             {job.artifacts.map((art, idx) => (
               <div
                 key={`${art.invoice || 'inv'}-${idx}`}
-                className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border"
+                className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-background"
               >
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-text-primary truncate">
@@ -333,8 +327,7 @@ export default function RetriggerJobDetail() {
                 {art.status === 'OK' && art.filename && (
                   <button
                     type="button"
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg"
-                    style={{ background: '#EEF2FF', color: '#6C5CE7' }}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-aivar-purple-50 text-[#6C5CE7] hover:bg-aivar-purple-100"
                     onClick={() => {
                       const token = localStorage.getItem('pando_token')
                       fetch(`/api/retrigger/jobs/${encodeURIComponent(job.job_id)}/artifacts/${encodeURIComponent(art.filename)}`, {
@@ -369,8 +362,7 @@ export default function RetriggerJobDetail() {
           {job.invoice_numbers?.map((inv, idx) => (
             <span
               key={idx}
-              className="px-3 py-1.5 rounded-lg text-xs font-mono font-medium"
-              style={{ background: '#F5F5F7', color: '#44444F' }}
+              className="px-3 py-1.5 rounded-lg text-xs font-mono font-medium bg-background border border-border text-text-secondary"
             >
               {inv}
             </span>
