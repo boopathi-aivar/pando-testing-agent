@@ -11,6 +11,7 @@ import {
 } from '../api/client'
 import RetriggerProjectModal from '../components/retrigger/RetriggerProjectModal'
 import StatusBadge from '../components/retrigger/StatusBadge'
+import CustomSelect from '../components/ui/CustomSelect'
 
 const BULK_ACTIONS = [
   {
@@ -238,20 +239,21 @@ export default function Retrigger() {
 
               <div className="mb-4">
                 <label className="block text-text-secondary text-sm font-medium mb-2">Project</label>
-                <div className="flex gap-2">
-                  <select
+                <div className="flex gap-2 items-start">
+                  <CustomSelect
                     value={selectedProjectId}
-                    onChange={(e) => setSelectedProjectId(e.target.value)}
-                    className="flex-1 text-sm"
-                    required
-                  >
-                    <option value="">Select a project...</option>
-                    {projects.map((proj) => (
-                      <option key={proj.project_id} value={proj.project_id}>
-                        {proj.project_name} ({proj.s3_bucket})
-                      </option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: '', label: 'Select a project...' },
+                      ...projects.map((proj) => ({
+                        value: proj.project_id,
+                        label: `${proj.project_name} (${proj.s3_bucket})`,
+                      })),
+                    ]}
+                    onChange={setSelectedProjectId}
+                    className="flex-1"
+                    triggerClassName="max-w-none h-[38px] text-sm font-medium"
+                    menuClassName="max-w-none w-full"
+                  />
                   {selectedProjectId && (
                     <>
                       <button

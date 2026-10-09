@@ -410,6 +410,64 @@ def _apply_filters(
     return items
 
 
+# Discover checklist uses raw DynamoDB attribute names; list rows use parse_attachment.
+_VIEW_FIELD_ALIASES = {
+    "error": "error_message",
+    "textract_classification_result": "textract_carrier",
+    "image_model_classification_result": "vision_carrier",
+    "stage_validation": "missing_fields",
+}
+
+
+def _shape_row_for_view(parsed: dict, raw: dict, selected_fields: list[str]) -> dict:
+    """Keep action keys + only the columns the user selected."""
+    out = {
+        "email_id": parsed.get("email_id") or "",
+        "attachment_id": parsed.get("attachment_id") or "",
+        "filename": parsed.get("filename") or "",
+        "s3_path": parsed.get("s3_path") or "",
+        "status": parsed.get("status") or "",
+    }
+    raw_safe = sanitize(raw) if raw else {}
+    for field in selected_fields:
+        alias = _VIEW_FIELD_ALIASES.get(field, field)
+        if alias in parsed:
+            out[field] = parsed.get(alias)
+        elif field in parsed:
+            out[field] = parsed.get(field)
+        else:
+            val = raw_safe.get(field)
+            if isinstance(val, (dict, list)):
+                out[field] = json.dumps(val, default=str)
+            else:
+                out[field] = _safe_str(val)
+    return out
+
+
+def _view_list_meta(project_id: str) -> dict | None:
+    try:
+        from services.observability_views import get_view
+
+        view = get_view(project_id)
+    except Exception:
+        return None
+    if not view:
+        return None
+    selected = list(view.get("selected_fields") or [])
+    return {
+        "view_id": view.get("view_id"),
+        "name": view.get("name"),
+        "ui_mode": view.get("ui_mode") or "dynamic",
+        "columns": [{"id": f, "label": f} for f in selected],
+        "selected_fields": selected,
+        "actions": {
+            "view_pdf": bool(view.get("action_view_pdf", True)),
+            "cloudwatch": bool(view.get("action_cloudwatch", True)),
+            "retrigger": bool(view.get("action_retrigger", True)),
+        },
+    }
+
+
 def list_invoices(
     project_id: str,
     status: Optional[str] = None,
@@ -421,14 +479,20 @@ def list_invoices(
     page_size: int = 20,
 ) -> dict:
     raw = get_cached_items(project_id)
+    parsed_pairs = [(parse_attachment(r), r) for r in raw]
     items = _apply_filters(
-        [parse_attachment(r) for r in raw],
+        [p for p, _ in parsed_pairs],
         status=status,
         carrier=carrier,
         invoice_number=invoice_number,
         created_after=created_after,
         created_before=created_before,
     )
+    # Re-attach raw rows for view shaping (same order as filtered parsed list).
+    by_key = {
+        (p.get("email_id"), p.get("attachment_id")): r
+        for p, r in parsed_pairs
+    }
     items.sort(
         key=lambda i: i.get("created_at_iso") or i.get("updated_at_iso") or "",
         reverse=True,
@@ -438,13 +502,50 @@ def list_invoices(
     start = (page - 1) * page_size
     page_items = items[start : start + page_size]
 
-    return {
+    view_meta = _view_list_meta(project_id)
+    if view_meta and view_meta.get("selected_fields"):
+        selected = view_meta["selected_fields"]
+        page_items = [
+            _shape_row_for_view(
+                i,
+                by_key.get((i.get("email_id"), i.get("attachment_id"))) or {},
+                selected,
+            )
+            for i in page_items
+        ]
+
+    result = {
         "total": total,
         "page": page,
         "page_size": page_size,
         "total_pages": max(1, -(-total // page_size)),
         "items": page_items,
     }
+    if view_meta:
+        columns = view_meta["columns"]
+        if not columns:
+            defaults = [
+                "invoice_number",
+                "carrier_name",
+                "status",
+                "invoice_date",
+                "created_at",
+                "error_message",
+            ]
+            sample = page_items[0] if page_items else {}
+            columns = [
+                {"id": f, "label": f}
+                for f in defaults
+                if f in sample
+            ]
+        result["columns"] = columns
+        result["actions"] = view_meta["actions"]
+        result["view"] = {
+            "view_id": view_meta["view_id"],
+            "name": view_meta["name"],
+            "ui_mode": view_meta["ui_mode"],
+        }
+    return result
 
 
 def get_invoice_detail(project_id: str, email_id: str, attachment_id: str) -> dict | None:
@@ -474,6 +575,15 @@ def get_invoice_detail(project_id: str, email_id: str, attachment_id: str) -> di
             base["api_payload"] = raw_payload
     else:
         base["api_payload"] = None
+
+    # Expose every top-level DynamoDB attribute so configured checklist fields
+    # (pk, sk, type, error map, etc.) are visible — without overwriting parsed keys.
+    for key, val in sanitize(item).items():
+        if key not in base:
+            base[key] = val
+        elif key == "error" and not (base.get("error_message") or base.get("error_code")):
+            # Keep raw error map available when parsed message is empty
+            base["error"] = val
 
     pdf_loc = resolve_invoice_pdf_location(base)
     base["has_pdf"] = pdf_loc is not None
@@ -615,8 +725,9 @@ def build_cloudwatch_url(
     # Query values are URI-encoded first so quotes become %22 → $2522.
     lg_enc = quote(quote(log_group, safe=""), safe="").replace("%", "$")
 
-    # Quotes are required: unquoted UUIDs (hyphens) match 0 events.
-    params = [f"filterPattern={quote(f'\"{filter_term}\"', safe='')}"]
+   # Quotes are required: unquoted UUIDs (hyphens) match 0 events.
+    quoted_term = f'"{filter_term}"'
+    params = [f"filterPattern={quote(quoted_term, safe='')}"]   
     if start_ms is not None:
         params.append(f"start={start_ms}")
     if end_ms is not None:

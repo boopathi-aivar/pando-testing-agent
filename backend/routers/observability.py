@@ -5,9 +5,14 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 
+from models.observability_view import (
+    DiscoverSchemaRequest,
+    ObservabilityViewCreate,
+    ObservabilityViewUpdate,
+)
 from observability.registry import list_projects
 from routers.auth import get_current_user
-from services import observability_logs
+from services import observability_logs, observability_views
 
 router = APIRouter(tags=["observability"])
 
@@ -15,6 +20,51 @@ router = APIRouter(tags=["observability"])
 @router.get("/projects")
 def get_observability_projects(_user=Depends(get_current_user)):
     return {"projects": list_projects()}
+
+
+# ── Configurable views (must be registered before /{project_id}/...) ─────────
+
+
+@router.post("/discover-schema")
+def discover_schema(body: DiscoverSchemaRequest, _user=Depends(get_current_user)):
+    return observability_views.discover_schema(
+        body.table_name,
+        account=body.account,
+        sample_limit=body.sample_limit,
+    )
+
+
+@router.get("/views")
+def get_views(_user=Depends(get_current_user)):
+    return {"views": observability_views.list_views()}
+
+
+@router.post("/views")
+def create_view(body: ObservabilityViewCreate, _user=Depends(get_current_user)):
+    return observability_views.create_view(body)
+
+
+@router.get("/views/{view_id}")
+def get_view(view_id: str, _user=Depends(get_current_user)):
+    view = observability_views.get_view(view_id)
+    if not view:
+        raise HTTPException(status_code=404, detail=f"View '{view_id}' not found")
+    return view
+
+
+@router.put("/views/{view_id}")
+def update_view(
+    view_id: str,
+    body: ObservabilityViewUpdate,
+    _user=Depends(get_current_user),
+):
+    return observability_views.update_view(view_id, body)
+
+
+@router.delete("/views/{view_id}")
+def delete_view(view_id: str, _user=Depends(get_current_user)):
+    observability_views.delete_view(view_id)
+    return {"ok": True, "view_id": view_id}
 
 
 @router.get("/{project_id}/invoices")

@@ -24,7 +24,11 @@ async function request(path, options = {}) {
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.detail ?? `Request failed: ${res.status}`)
+    const detail = body.detail
+    const msg = Array.isArray(detail)
+      ? detail.map((d) => d.msg || JSON.stringify(d)).join('; ')
+      : (detail ?? `Request failed: ${res.status}`)
+    throw new Error(msg)
   }
   return res.json()
 }
@@ -188,3 +192,90 @@ export async function resumeRetriggerJob(jobId) {
 export async function triggerRetriggerFetchRecords(jobId) {
   return request(`/retrigger/jobs/${jobId}/fetch-records`, { method: 'POST' })
 }
+
+// ─── Observability ────────────────────────────────────────────────────────────
+export async function getObservabilityProjects() {
+  return request('/observability/projects')
+}
+
+export async function discoverObservabilitySchema(tableName, account = 'ops', sampleLimit = 25) {
+  return request('/observability/discover-schema', {
+    method: 'POST',
+    body: JSON.stringify({
+      table_name: tableName,
+      account,
+      sample_limit: sampleLimit,
+    }),
+  })
+}
+
+export async function getObservabilityViews() {
+  return request('/observability/views')
+}
+
+export async function getObservabilityView(viewId) {
+  return request(`/observability/views/${encodeURIComponent(viewId)}`)
+}
+
+export async function createObservabilityView(data) {
+  return request('/observability/views', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateObservabilityView(viewId, data) {
+  return request(`/observability/views/${encodeURIComponent(viewId)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteObservabilityView(viewId) {
+  const token = getToken()
+  const headers = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(
+    `${API_BASE}/api/observability/views/${encodeURIComponent(viewId)}`,
+    { method: 'DELETE', headers },
+  )
+  if (res.status === 401) {
+    clearAuth()
+    window.location.href = '/login'
+    throw new Error('Session expired')
+  }
+  if (!res.ok) {
+    const b = await res.json().catch(() => ({}))
+    throw new Error(b.detail ?? `Delete failed: ${res.status}`)
+  }
+  return res.json().catch(() => ({ ok: true }))
+}
+
+export async function getObservabilityInvoices(projectId, filters = {}) {
+  const params = new URLSearchParams(
+    Object.entries(filters).filter(([, v]) => v != null && v !== '' && v !== 'all'),
+  ).toString()
+  return request(
+    `/observability/${encodeURIComponent(projectId)}/invoices${params ? `?${params}` : ''}`,
+  )
+}
+
+export async function getObservabilityInvoiceDetail(projectId, emailId, attachmentId) {
+  return request(
+    `/observability/${encodeURIComponent(projectId)}/invoices/${encodeURIComponent(emailId)}/${encodeURIComponent(attachmentId)}`,
+  )
+}
+
+export async function getObservabilityCloudwatchLink(projectId, emailId, attachmentId) {
+  return request(
+    `/observability/${encodeURIComponent(projectId)}/invoices/${encodeURIComponent(emailId)}/${encodeURIComponent(attachmentId)}/cloudwatch-link`,
+  )
+}
+
+export async function retriggerObservabilityInvoice(projectId, emailId) {
+  return request(
+    `/observability/${encodeURIComponent(projectId)}/invoices/${encodeURIComponent(emailId)}/retrigger`,
+    { method: 'POST' },
+  )
+}
+

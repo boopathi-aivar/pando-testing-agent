@@ -22,6 +22,10 @@ _JOBS_TABLE     = os.getenv("JOBS_TABLE",     "pando-jobs")
 _DOCS_TABLE     = os.getenv("DOCS_TABLE",     "pando-doc-projects")
 _RETRIGGER_PROJECTS_TABLE = os.getenv("RETRIGGER_PROJECTS_TABLE", "pando-retrigger-projects")
 _RETRIGGER_JOBS_TABLE     = os.getenv("RETRIGGER_JOBS_TABLE",     "pando-retrigger-jobs")
+_OBSERVABILITY_VIEWS_TABLE = os.getenv(
+    "OBSERVABILITY_VIEWS_TABLE",
+    "invoice-testing-agent-observability-views",
+)
 
 _dynamodb = None
 
@@ -57,6 +61,10 @@ def tbl_retrigger_jobs():
     return _get_resource().Table(_RETRIGGER_JOBS_TABLE)
 
 
+def tbl_observability_views():
+    return _get_resource().Table(_OBSERVABILITY_VIEWS_TABLE)
+
+
 def check_connection() -> None:
     print("\n" + "─" * 60)
     print("  DynamoDB connection check")
@@ -67,6 +75,7 @@ def check_connection() -> None:
     print(f"  Docs table      : {_DOCS_TABLE}")
     print(f"  Retrig projects : {_RETRIGGER_PROJECTS_TABLE}")
     print(f"  Retrig jobs     : {_RETRIGGER_JOBS_TABLE}")
+    print(f"  Obs views       : {_OBSERVABILITY_VIEWS_TABLE}")
     print("─" * 60)
 
     try:
@@ -188,4 +197,18 @@ def ensure_tables() -> None:
             TimeToLiveSpecification={"Enabled": True, "AttributeName": "ttl"},
         )
         print(f"[DynamoDB] Created table: {_RETRIGGER_JOBS_TABLE} (TTL on 'ttl' attribute)")
+
+    # ── observability view configs ────────────────────────────────────────────
+    if _OBSERVABILITY_VIEWS_TABLE not in existing:
+        client.create_table(
+            TableName=_OBSERVABILITY_VIEWS_TABLE,
+            BillingMode="PAY_PER_REQUEST",
+            AttributeDefinitions=[
+                {"AttributeName": "view_id", "AttributeType": "S"},
+            ],
+            KeySchema=[
+                {"AttributeName": "view_id", "KeyType": "HASH"},
+            ],
+        )
+        print(f"[DynamoDB] Created table: {_OBSERVABILITY_VIEWS_TABLE}")
 

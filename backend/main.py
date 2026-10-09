@@ -56,6 +56,13 @@ async def lifespan(app: FastAPI):
     try:
         ensure_tables()
         seed_if_empty()
+        from services.observability_views import (
+            clear_legacy_seeded_views_once,
+            seed_views_from_registry_once,
+        )
+
+        seed_views_from_registry_once()
+        clear_legacy_seeded_views_once()
     except Exception as exc:
         print(f"\n  WARNING: Could not initialize database — {exc}")
         print("  The server will start, but database operations may fail.")

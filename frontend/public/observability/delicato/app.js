@@ -153,8 +153,7 @@ const PAGE_SIZE = 20;
 let timeFilter = { kind: "none", label: "All time", after: null, before: null, chip: "" };
 let timePopoverMode = "relative";
 
-/** Custom Status / Carrier dropdown values */
-let filterStatusValue = "";
+/** Custom Carrier dropdown value */
 let filterCarrierValue = "";
 let filterInvoiceNoValue = "";
 let _invoiceNoDebounce = null;
@@ -173,7 +172,6 @@ document.addEventListener("DOMContentLoaded", () => {
   populateCarrierFilter();
   syncTimeChipUI();
   loadAll();
-  loadStatuses();
 });
 
 function loadAll() {
@@ -201,7 +199,6 @@ function populateCarrierFilter() {
 async function loadStats() {
   try {
     const params = new URLSearchParams();
-    if (filterStatusValue)  params.set("status",  filterStatusValue);
     if (filterCarrierValue) params.set("carrier", filterCarrierValue);
     if (filterInvoiceNoValue) params.set("invoice_number", filterInvoiceNoValue);
     const range = getCreatedRangeParams();
@@ -220,34 +217,14 @@ async function loadStats() {
   }
 }
 
-/* ── Custom Status / Carrier dropdowns ───────────────────────────────────── */
-async function loadStatuses() {
-  try {
-    const data = await apiFetch("/statuses");
-    const menu = document.getElementById("statusSelectMenu");
-    if (!menu) return;
-    data.statuses.forEach((s) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "custom-select-option";
-      btn.dataset.value = s;
-      btn.textContent = s;
-      btn.onclick = () => pickCustomSelect("status", s, s);
-      menu.appendChild(btn);
-    });
-  } catch (e) {
-    console.error("Statuses error:", e);
-  }
-}
-
+/* ── Custom Carrier dropdown ─────────────────────────────────────────────── */
 function toggleCustomSelect(which, event) {
   if (event) event.stopPropagation();
   closeTimePopover();
-  const other = which === "status" ? "carrier" : "status";
-  closeCustomSelect(other);
+  if (which !== "carrier") return;
 
-  const menu = document.getElementById(`${which}SelectMenu`);
-  const trigger = document.getElementById(`${which}SelectTrigger`);
+  const menu = document.getElementById("carrierSelectMenu");
+  const trigger = document.getElementById("carrierSelectTrigger");
   if (!menu || !trigger) return;
 
   const opening = menu.hidden;
@@ -273,28 +250,23 @@ function closeCustomSelect(which) {
 }
 
 function closeAllCustomSelects() {
-  closeCustomSelect("status");
   closeCustomSelect("carrier");
   document.removeEventListener("click", onCustomSelectOutside, true);
 }
 
 function onCustomSelectOutside(e) {
-  const statusGroup = document.getElementById("statusSelectGroup");
   const carrierGroup = document.getElementById("carrierSelectGroup");
-  if (statusGroup?.contains(e.target) || carrierGroup?.contains(e.target)) return;
+  if (carrierGroup?.contains(e.target)) return;
   closeAllCustomSelects();
 }
 
 function pickCustomSelect(which, value, label) {
-  if (which === "status") {
-    filterStatusValue = value;
-    document.getElementById("statusSelectLabel").textContent = label;
-  } else {
-    filterCarrierValue = value;
-    document.getElementById("carrierSelectLabel").textContent = label;
-  }
+  if (which !== "carrier") return;
+  filterCarrierValue = value;
+  const labelEl = document.getElementById("carrierSelectLabel");
+  if (labelEl) labelEl.textContent = label;
 
-  const menu = document.getElementById(`${which}SelectMenu`);
+  const menu = document.getElementById("carrierSelectMenu");
   if (menu) {
     menu.querySelectorAll(".custom-select-option").forEach((opt) => {
       opt.classList.toggle("selected", opt.dataset.value === value);
@@ -307,7 +279,6 @@ function pickCustomSelect(which, value, label) {
 
 /* ── Invoice list ─────────────────────────────────────────────────────────── */
 async function loadInvoices() {
-  const status  = filterStatusValue;
   const carrier = filterCarrierValue;
   const invoiceNo = filterInvoiceNoValue;
   const range   = getCreatedRangeParams();
@@ -316,7 +287,6 @@ async function loadInvoices() {
     page:      currentPage,
     page_size: PAGE_SIZE,
   });
-  if (status)  params.set("status",  status);
   if (carrier) params.set("carrier", carrier);
   if (invoiceNo) params.set("invoice_number", invoiceNo);
   if (range.created_after)  params.set("created_after",  range.created_after);

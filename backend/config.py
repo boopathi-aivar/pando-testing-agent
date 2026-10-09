@@ -69,6 +69,11 @@ class Settings:
     OBSERVABILITY_DDB_REGION: str = (
         os.getenv("OBSERVABILITY_DDB_REGION", "") or DELICATO_AWS_REGION
     )
+    # App-account table storing user-configured Observability column layouts.
+    OBSERVABILITY_VIEWS_TABLE: str = os.getenv(
+        "OBSERVABILITY_VIEWS_TABLE",
+        "invoice-testing-agent-observability-views",
+    )
 
     # ── Observability: Meta (Account B) ────────────────────────────────────────
     META_LOG_TABLE: str = os.getenv("META_LOG_TABLE", "")
