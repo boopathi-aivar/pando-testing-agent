@@ -661,7 +661,7 @@ export default function Results() {
         <div className="flex items-center gap-3">
           <input
             type="text"
-            placeholder="Search by invoice number..."
+            placeholder="Filter invoice number"
             value={invoiceSearch}
             onChange={(e) => setInvoiceSearch(e.target.value)}
             className="w-60 text-sm"

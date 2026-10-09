@@ -54,22 +54,6 @@
 
     <!-- Filters -->
     <section class="filters">
-      <div class="filter-group custom-select-group" id="statusSelectGroup">
-        <label>Status</label>
-        <button type="button" class="custom-select-trigger" id="statusSelectTrigger"
-          onclick="toggleCustomSelect('status', event)" aria-haspopup="listbox" aria-expanded="false">
-          <span class="custom-select-label" id="statusSelectLabel">All Statuses</span>
-          <svg class="custom-select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M6 9l6 6 6-6"/>
-          </svg>
-        </button>
-        <div class="custom-select-menu" id="statusSelectMenu" role="listbox" hidden>
-          <button type="button" class="custom-select-option selected" data-value=""
-            onclick="pickCustomSelect('status', '', 'All Statuses')">All Statuses</button>
-        </div>
-      </div>
-
       <div class="filter-group custom-select-group" id="carrierSelectGroup">
         <label>Carrier</label>
         <button type="button" class="custom-select-trigger" id="carrierSelectTrigger"
@@ -88,7 +72,7 @@
 
       <div class="filter-group" id="invoiceNoFilterGroup">
         <label for="invoiceNoInput">Invoice No</label>
-        <input type="search" id="invoiceNoInput" placeholder="Search invoice no…"
+        <input type="search" id="invoiceNoInput" placeholder="Filter invoice number"
           autocomplete="off" oninput="onInvoiceNoInput()" />
       </div>
 

@@ -1,5 +1,18 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
+import CustomSelect from '../ui/CustomSelect'
+
+const AWS_REGION_OPTIONS = [
+  { value: 'us-east-1', label: 'US East (N. Virginia) - us-east-1' },
+  { value: 'us-east-2', label: 'US East (Ohio) - us-east-2' },
+  { value: 'us-west-1', label: 'US West (N. California) - us-west-1' },
+  { value: 'us-west-2', label: 'US West (Oregon) - us-west-2' },
+  { value: 'ap-south-1', label: 'Asia Pacific (Mumbai) - ap-south-1' },
+  { value: 'ap-southeast-1', label: 'Asia Pacific (Singapore) - ap-southeast-1' },
+  { value: 'ap-southeast-2', label: 'Asia Pacific (Sydney) - ap-southeast-2' },
+  { value: 'eu-central-1', label: 'Europe (Frankfurt) - eu-central-1' },
+  { value: 'eu-west-1', label: 'Europe (Ireland) - eu-west-1' },
+]
 
 export default function RetriggerProjectModal({ project, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -134,28 +147,15 @@ export default function RetriggerProjectModal({ project, onClose, onSave }) {
               </p>
             </div>
 
-            {/* AWS Region */}
-            <div>
-              <label className="block text-text-secondary text-sm font-medium mb-2">
-                AWS Region *
-              </label>
-              <select
-                value={formData.aws_region}
-                onChange={(e) => handleChange('aws_region', e.target.value)}
-                className="w-full text-sm"
-                required
-              >
-                <option value="us-east-1">US East (N. Virginia) - us-east-1</option>
-                <option value="us-east-2">US East (Ohio) - us-east-2</option>
-                <option value="us-west-1">US West (N. California) - us-west-1</option>
-                <option value="us-west-2">US West (Oregon) - us-west-2</option>
-                <option value="ap-south-1">Asia Pacific (Mumbai) - ap-south-1</option>
-                <option value="ap-southeast-1">Asia Pacific (Singapore) - ap-southeast-1</option>
-                <option value="ap-southeast-2">Asia Pacific (Sydney) - ap-southeast-2</option>
-                <option value="eu-central-1">Europe (Frankfurt) - eu-central-1</option>
-                <option value="eu-west-1">Europe (Ireland) - eu-west-1</option>
-              </select>
-            </div>
+            <CustomSelect
+              label="AWS Region *"
+              value={formData.aws_region}
+              options={AWS_REGION_OPTIONS}
+              onChange={(v) => handleChange('aws_region', v)}
+              className="w-full"
+              triggerClassName="max-w-none h-[38px] text-sm font-medium"
+              menuClassName="max-w-none w-full"
+            />
 
 
             <div>

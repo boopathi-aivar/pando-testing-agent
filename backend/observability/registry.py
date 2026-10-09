@@ -122,7 +122,19 @@ OBSERVABILITY_PROJECTS = _build_projects()
 
 
 def get_project(project_id: str) -> ObservabilityProject | None:
-    return OBSERVABILITY_PROJECTS.get(project_id)
+    # Prefer user-configured views (may override a builtin id).
+    try:
+        from services.observability_views import get_view, view_as_registry_project
+
+        view = get_view(project_id)
+        if view and view.get("table_name"):
+            return view_as_registry_project(view)
+    except Exception:
+        pass
+    built_in = OBSERVABILITY_PROJECTS.get(project_id)
+    if built_in and built_in.table_name:
+        return built_in
+    return built_in
 
 
 def log_groups_for_project(project_id: str) -> list[str]:
@@ -138,8 +150,30 @@ def log_groups_for_project(project_id: str) -> list[str]:
 
 
 def list_projects() -> list[dict]:
-    return [
-        {"id": p.id, "name": p.name, "account": p.account, "table": p.table_name}
-        for p in OBSERVABILITY_PROJECTS.values()
-        if p.table_name
-    ]
+    """Hub list — only user-configurable views (hardcoded projects are seeded once into DB)."""
+    try:
+        from services.observability_views import list_views
+
+        out = []
+        for v in list_views():
+            if not v.get("table_name"):
+                continue
+            out.append(
+                {
+                    "id": v["view_id"],
+                    "name": v.get("name") or v["view_id"],
+                    "account": v.get("account") or "ops",
+                    "table": v.get("table_name"),
+                    "description": v.get("description") or "",
+                    "source": "configured",
+                    "ui_mode": v.get("ui_mode") or "dynamic",
+                    "selected_fields": v.get("selected_fields") or [],
+                    "action_view_pdf": bool(v.get("action_view_pdf", True)),
+                    "action_cloudwatch": bool(v.get("action_cloudwatch", True)),
+                    "action_retrigger": bool(v.get("action_retrigger", True)),
+                }
+            )
+        out.sort(key=lambda x: (x.get("name") or x["id"]).lower())
+        return out
+    except Exception:
+        return []
